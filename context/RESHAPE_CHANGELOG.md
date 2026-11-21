@@ -217,3 +217,9 @@ Ashish is away and asked me to keep going phase by phase and test everything tog
 - **Demo kit** `context/DEMO.md`: how to run (incl. phone via cloudflared), 3 tested topics, the 3-minute pitch, a fallback table (IPv6 hotspot, `VOICE_PROVIDER=deepgram`, `FAST_LLM_PROVIDER=gemini`, noisy hall, avatar, backup clip), and the pre-stage checklist.
 - **Tests:** worker **114 passed** (+ recap fallback in Telugu with no score words, session memory), avatar **58 passed** (+ recap endpoint), frontend build + PWA check OK.
 - **[ASK ASHISH] pending for all phases together:** phone session over the demo network, Telugu wording check, 3-minute rehearsal, backup clip.
+
+## Combined test (2026-11-22): ✅ PASSED on the phone, in Telugu
+- **Network fix for the hotspot:** IPv6 on this hotspot is completely broken (even to Google), but the Mac still preferred it, and LiveKit's SDK has no IPv4 fallback, so rooms couldn't be joined. Ashish turned IPv6 off (`sudo networksetup -setv6off Wi-Fi`; undo with `-setv6automatic`); room join then OK in 1.7 s.
+- **New LiveKit project** `aa-v5cciyrx` (key updated by Ashish in `avatar/.env`): REST auth and room join verified.
+- **Phone access** via Cloudflare quick tunnel (`cloudflared tunnel --url http://localhost:3000`): page and API checked through the tunnel.
+- **Ashish:** "working, checked in Telugu, we are rocking". The full session on the phone works end to end. **Phases 3–5 exit checkpoints met** (pending only the stage rehearsal items in `context/DEMO.md`).
