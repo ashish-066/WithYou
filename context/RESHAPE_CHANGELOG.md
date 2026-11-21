@@ -153,3 +153,4 @@ Ashish: it works, but the voice breaks. Diagnosis from the session transcript in
 - **Voice:** text in another Indian script now keeps the current voice, never the English one.
 - **Real brain:** the exact misheard Kannada turn in a Telugu session → reply in Telugu (317 Telugu chars, 0 Kannada); "ఇప్పుడు మలయాళంలో చెప్పు" → reply in Malayalam.
 - **Tests:** worker **103 passed** (+9: switch requests incl. not-a-request and ambiguous cases, processor switches before the reply), avatar **56 passed** (+2: Kannada → current voice, listening follows the buddy, buttons switch both).
+- **Phase 2 accepted by Ashish (2026-11-22)** ("let's put it like this and move to the next phase"): Malayalam/Telugu voice conversation works end to end; tuning can continue later. **Phase 2 exit checkpoint met.**
