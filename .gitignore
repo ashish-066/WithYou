@@ -29,3 +29,7 @@ node_modules/
 .claude/settings.local.json
 # Spike outputs (audio files etc.)
 spikes/out/
+
+# Original full-size demo recording (the repo has assets/withyou-demo.mp4)
+assets/Demo.mp4
+.DS_Store

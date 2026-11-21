@@ -15,6 +15,36 @@ Tomorrow she'll still have a chapter she doesn't understand and a test she's dre
 
 That's WithYou. Not an app you open for one job: a companion that's **with you** through the whole of it, the studying and the stress and the ordinary days in between.
 
+## See it
+
+<p align="center">
+  <a href="assets/withyou-demo.mp4"><img src="assets/avatar.jpeg" width="280" alt="WithYou on a video call: 'Hey, I'm here. How's your day going? Tell me anything, I'm listening.'"></a>
+  <br>
+  <b><a href="assets/withyou-demo.mp4">▶ Watch the 6-minute demo</a></b> (recorded on a phone, the whole app end to end)
+</p>
+
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="assets/homescreen-1.jpeg" width="230" alt="Home screen"><br><sub><b>Home.</b> Your companion greets you, remembers your streak, and offers two doors: study together, or just talk.</sub></td>
+    <td align="center" width="33%"><img src="assets/avatar.jpeg" width="230" alt="Live conversation with the video avatar"><br><sub><b>Just talking.</b> A face-to-face call with live captions. Switch between മല · తెలు · தமி · हिं · EN at any moment.</sub></td>
+    <td align="center" width="33%"><img src="assets/waking-up.jpeg" width="230" alt="Companion waking up"><br><sub><b>Without the video face,</b> an animated companion whose expression shows it's listening, thinking or speaking.</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="assets/homescreen-2.jpeg" width="230" alt="Pick up where you left off"><br><sub><b>It remembers.</b> Pick up where you left off, and suggestions drawn from <i>your</i> past conversations.</sub></td>
+    <td align="center"><img src="assets/studymode-1.jpeg" width="230" alt="Learn: learn it or test your knowledge"><br><sub><b>Learn your way.</b> Have it explained, or flip roles and teach it: "Test your knowledge".</sub></td>
+    <td align="center"><img src="assets/studymode-2.jpeg" width="230" alt="Study a page from your textbook"><br><sub><b>Your own textbook.</b> Photograph a page and go through exactly that page together.</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="assets/insights.jpeg" width="230" alt="Insights: streak and feelings"><br><sub><b>It notices.</b> "The last few days seem a bit heavier." A private, gentle read of how you've been; never a diagnosis.</sub></td>
+    <td align="center"><img src="assets/garden.jpeg" width="230" alt="Learning garden"><br><sub><b>Growing, not grading.</b> A plant for each topic, a leaf for each idea you've understood, a flower when you know it all.</sub></td>
+    <td align="center"><img src="assets/history.jpeg" width="230" alt="History of conversations"><br><sub><b>Your story so far.</b> Every conversation, with how you felt. Private "just talk" content never appears here.</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="assets/settings-language.jpeg" width="230" alt="Language and voice"><br><sub><b>Your language, your voice.</b> Five languages and two voices; the whole app follows.</sub></td>
+    <td colspan="2" valign="middle"><sub>All screenshots are from the live app on an ordinary Android phone. The demo account in them is real data from testing: a week of study sessions and "just talk" conversations in English and Telugu.</sub></td>
+  </tr>
+</table>
+
 ## Why this is needed
 
 - **Young Indians are carrying a lot, quietly.** India's National Crime Records Bureau (ADSI 2022) recorded over 13,000 student suicides in one year, more than 35 every day. Behind that number are millions more who are anxious, lonely or overwhelmed and never say so out loud.
