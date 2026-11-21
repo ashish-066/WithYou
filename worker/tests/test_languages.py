@@ -192,3 +192,24 @@ async def test_goodbye_is_spoken_before_the_report_is_written(monkeypatch):
     assert events[0] == ("spoken", flow.closing_message("candidate_ended", "te-IN"))
     assert events[1:] == ["report", "report"]
     assert out["interview_ended"] and out["report_status"] == "completed"
+
+
+# =============================================================================
+# Replies in Indic scripts survive imperfect JSON from the model
+# =============================================================================
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ('{"response_text": "ఖచ్చితంగా, మనం కలిసి నేర్చుకుందాం."}', "ఖచ్చితంగా, మనం కలిసి నేర్చుకుందాం."),
+        ('{\n "response_text": "ശരി,\nനമുക്ക് പഠിക്കാം."}', "ശരി,\nനമുക്ക് പഠിക്കാം."),
+        ('Sure!\n```json\n{"response_text": "ശരി, നമുക്ക് പഠിക്കാം."}\n```', "ശരി, നമുക്ക് പഠിക്കാം."),
+        ('{"response_text": "మనం కలిసి \\"server\\" గురించి', 'మనం కలిసి "server" గురించి'),
+    ],
+)
+def test_indic_reply_is_never_mojibake(raw, expected):
+    # Regression: the fallback used .decode("unicode_escape"), turning Telugu into "à°à°..."
+    text = conversation._parse_conversation_response(raw).response_text
+    assert text == expected
+    assert "à" not in text

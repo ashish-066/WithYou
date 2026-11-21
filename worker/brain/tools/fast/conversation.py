@@ -250,54 +250,71 @@ def _format_recent_messages(messages: list[Message], limit: int = 6) -> str:
     return "\n".join(formatted)
 
 
-def _parse_conversation_response(response_text: str) -> ConversationResponse:
-    """Parse the LLM response into a ConversationResponse."""
+def _json_object(text: str) -> dict | None:
+    """The first JSON object in the model's text, tolerating code fences, text
+    around it and raw newlines inside strings (strict=False)."""
+    import json
+
+    start = text.find("{")
+    while start != -1:
+        try:
+            obj, _ = json.JSONDecoder(strict=False).raw_decode(text, start)
+            if isinstance(obj, dict):
+                return obj
+        except json.JSONDecodeError:
+            pass
+        start = text.find("{", start + 1)
+    return None
+
+
+def _unescape_json_string(raw: str) -> str:
+    """Decode a JSON string body (\\n, \\", \\u0c15 ...) without mangling non-ASCII text.
+
+    The old fallback used .encode().decode("unicode_escape"), which turns UTF-8
+    Telugu/Malayalam into Latin-1 mojibake.
+    """
     import json
 
     try:
-        # Try to parse as JSON
-        # Handle potential markdown code blocks
-        text = response_text.strip()
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
+        return json.loads(f'"{raw}"', strict=False)
+    except json.JSONDecodeError:
+        return raw.replace('\\"', '"').replace("\\n", " ")
 
-        data = json.loads(text.strip())
 
+def _parse_conversation_response(response_text: str) -> ConversationResponse:
+    """Parse the LLM response into a ConversationResponse."""
+    import re
+
+    data = _json_object(response_text)
+    if data is not None and isinstance(data.get("response_text"), str):
         return ConversationResponse(
-            response_text=data.get("response_text", "I understand. Please continue."),
-            follow_up_questions=data.get("follow_up_questions", [])[:2],
-            topics_touched=data.get("topics_touched", []),
-            claims_detected=data.get("claims_detected", []),
+            response_text=data["response_text"].strip() or "I understand. Please continue.",
+            follow_up_questions=list(data.get("follow_up_questions") or [])[:2],
+            topics_touched=list(data.get("topics_touched") or []),
+            claims_detected=[],
             sentiment=data.get("sentiment", "neutral"),
             confidence=0.8,
         )
 
-    except json.JSONDecodeError:
-        import re
-        logger.warning("Failed to parse conversation response as JSON, extracting text")
-        # Try to extract response_text from partial/malformed JSON
-        match = re.search(r'"response_text"\s*:\s*"((?:[^"\\]|\\.)*)', response_text)
-        if match:
-            clean_text = match.group(1).encode().decode('unicode_escape', errors='ignore')
-            return ConversationResponse(
-                response_text=clean_text.strip(),
-                follow_up_questions=[],
-                topics_touched=[],
-                claims_detected=[],
-                sentiment="neutral",
-                confidence=0.7,
-            )
-        # Fallback: clean any JSON syntax from raw response
-        cleaned = re.sub(r'[{}\[\]"]', '', response_text).strip()
+    logger.warning("Failed to parse conversation response as JSON, extracting text")
+    # A truncated or malformed object: take the response_text value as far as it goes
+    match = re.search(r'"response_text"\s*:\s*"((?:[^"\\]|\\.)*)', response_text)
+    if match:
         return ConversationResponse(
-            response_text=cleaned[:500] if cleaned else "I understand. Please continue.",
+            response_text=_unescape_json_string(match.group(1)).strip(),
             follow_up_questions=[],
             topics_touched=[],
             claims_detected=[],
             sentiment="neutral",
-            confidence=0.5,
+            confidence=0.7,
         )
+    # Not JSON at all: speak the text, minus JSON punctuation
+    cleaned = re.sub(r'[{}\[\]"]', "", response_text).strip()
+    return ConversationResponse(
+        response_text=cleaned[:500] if cleaned else "I understand. Please continue.",
+        follow_up_questions=[],
+        topics_touched=[],
+        claims_detected=[],
+        sentiment="neutral",
+        confidence=0.5,
+    )
