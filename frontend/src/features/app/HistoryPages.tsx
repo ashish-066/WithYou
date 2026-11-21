@@ -10,6 +10,7 @@ import type { BuddyLanguage } from '@/types';
 import { cx } from '@/ui/cx';
 import { useSession, useSessions } from './data';
 import { sessionUrl } from './HomePage';
+import { Scribble } from './notebook';
 import { usePrefs } from './prefs';
 import { LevelBadge } from './ProgressProfile';
 import { strings, type Strings } from './strings';
@@ -45,17 +46,19 @@ export function HistoryPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-h2">{t.historyTitle}</h1>
+      <h1 className="font-display text-h2 font-bold">
+        <Scribble>{t.historyTitle}</Scribble>
+      </h1>
       {isLoading && <p className="text-body text-muted">{t.loading}</p>}
       {!isLoading && sessions.length === 0 && (
-        <div className="rounded-ui border border-dashed border-line-strong p-6 text-center text-body text-muted">
+        <div className="sketch-soft border-dashed p-6 text-center text-body text-muted">
           {t.historyEmpty}
         </div>
       )}
       {groups.map((g) => (
         <section key={g.label} aria-label={g.label}>
           <h2 className="text-meta text-muted">{g.label}</h2>
-          <ul className="mt-2 divide-y divide-line rounded-ui border border-line bg-surface">
+          <ul className="mt-2 sketch-soft divide-y divide-line bg-surface">
             {g.items.map((s) => (
               <li key={s.session_id}>
                 <Link to={`/history/${s.session_id}`} className="flex items-center gap-3 px-4 py-3">
@@ -116,7 +119,7 @@ export function SessionDetailPage() {
           <header className="flex items-start gap-3">
             <ModeIcon mode={s.mode} />
             <div className="min-w-0">
-              <h1 className="font-display text-h2">{s.mode === 'talk' ? t.justTalk : s.topic || t.noTopic}</h1>
+              <h1 className="font-display text-h2 font-bold">{s.mode === 'talk' ? t.justTalk : s.topic || t.noTopic}</h1>
               <p className="text-body text-muted">
                 {dayLabel(s.created_at, t, language)} · {timeLabel(s.created_at, language)}
                 {s.mood && ` · ${t.moodNames[s.mood.label]}`}
@@ -130,12 +133,12 @@ export function SessionDetailPage() {
           </header>
 
           {s.recap && (
-            <section className="rounded-ui border border-line bg-surface p-5">
-              {s.recap.title && <h2 className="font-display text-h3">{s.recap.title}</h2>}
+            <section className="sketch-soft bg-surface p-5">
+              {s.recap.title && <h2 className="font-display text-h3 font-bold">{s.recap.title}</h2>}
               <p className="mt-2 text-lead">{s.recap.summary}</p>
               {s.recap.next_time && <p className="mt-3 text-body text-muted">{s.recap.next_time}</p>}
               {s.recap.help && (
-                <div role="note" className="mt-4 rounded-ui border border-accent bg-accent/10 p-3 text-body">
+                <div role="note" className="mt-4 sketch-soft bg-turmeric-soft p-3 text-body">
                   {s.recap.help}
                 </div>
               )}
@@ -150,7 +153,7 @@ export function SessionDetailPage() {
               <p className="mt-0.5 text-meta text-muted">{t.conceptsHelp}</p>
               <ul className="mt-2 space-y-2">
                 {s.ideas.map((idea, i) => (
-                  <li key={i} className="flex items-start gap-3 rounded-ui border border-line bg-surface px-4 py-3">
+                  <li key={i} className="flex items-start gap-3 sketch-soft bg-surface px-4 py-3">
                     <IdeaIcon status={idea.status} />
                     <span className="min-w-0 flex-1 text-body text-ink">{idea.text}</span>
                     <span className="shrink-0 text-meta text-muted">{t.status[idea.status]}</span>
@@ -163,14 +166,14 @@ export function SessionDetailPage() {
           {s.mode === 'study' && s.topic && (
             <button
               onClick={() => navigate(sessionUrl('study', s.topic ?? undefined))}
-              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-accent text-lead text-accent-on"
+              className="inline-flex h-12 w-full items-center justify-center gap-2 sketch bg-accent text-lead font-semibold text-accent-on"
             >
               {t.studyAgain}
               <ArrowRight size={18} aria-hidden />
             </button>
           )}
           {s.recap?.help && (
-            <a href="tel:14416" className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border border-accent text-lead text-accent">
+            <a href="tel:14416" className="inline-flex h-12 w-full items-center justify-center gap-2 sketch bg-surface text-lead font-semibold text-accent">
               <Phone size={18} aria-hidden />
               {t.helpCall}
             </a>

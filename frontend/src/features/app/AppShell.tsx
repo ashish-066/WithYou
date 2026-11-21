@@ -3,9 +3,10 @@
  * from tablet width up. Sessions (/session) run full screen, outside this frame.
  */
 import { NavLink, Outlet } from 'react-router-dom';
-import { BarChart3, BookOpen, History, Home, UserRound } from 'lucide-react';
+import { BarChart3, History, Home, UserRound } from 'lucide-react';
 
 import { cx } from '@/ui/cx';
+import { Buddy } from './Buddy';
 import { usePrefs } from './prefs';
 import { strings } from './strings';
 
@@ -20,14 +21,13 @@ export function AppShell() {
   ];
 
   return (
-    <div data-area="app" className="min-h-[100dvh] bg-canvas text-ink md:flex">
+    <div data-area="notebook" className="paper min-h-[100dvh] text-ink md:flex">
       {/* Side rail (tablet / desktop) */}
-      <nav aria-label="Main" className="hidden w-56 shrink-0 flex-col gap-1 border-r border-line bg-surface p-4 md:flex">
-        <div className="mb-6 flex items-center gap-2.5 px-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-accent-on">
-            <BookOpen size={18} aria-hidden />
-          </span>
-          <span className="font-display text-h3">Study Buddy</span>
+      <nav aria-label="Main" className="hidden w-60 shrink-0 flex-col gap-1 border-r-2 border-ink/80 bg-surface p-4 md:flex">
+        <div className="mb-6 flex flex-col items-center gap-1 px-2 pt-2">
+          <Buddy mood="happy" size={84} />
+          <span className="font-display text-h3 font-bold">Study Buddy</span>
+          <span className="font-hand text-[20px] leading-5 text-terracotta">പഠിപ്പ് കൂട്ടുകാരൻ</span>
         </div>
         {items.map(({ to, label, Icon, end }) => (
           <NavLink
@@ -36,8 +36,8 @@ export function AppShell() {
             end={end}
             className={({ isActive }) =>
               cx(
-                'flex items-center gap-3 rounded-ui px-3 py-2.5 text-lead',
-                isActive ? 'bg-accent/10 text-accent' : 'text-muted hover:text-ink',
+                'flex items-center gap-3 px-3 py-2.5 text-lead',
+                isActive ? 'sketch-soft bg-turmeric-soft font-semibold text-ink' : 'text-muted hover:text-ink',
               )
             }
           >
@@ -47,14 +47,14 @@ export function AppShell() {
         ))}
       </nav>
 
-      <main className="mx-auto w-full max-w-2xl px-4 pb-28 pt-[max(20px,env(safe-area-inset-top))] md:px-8 md:pb-12">
+      <main className="margin-line mx-auto w-full max-w-2xl px-5 pb-28 pt-[max(20px,env(safe-area-inset-top))] md:px-10 md:pb-12">
         <Outlet />
       </main>
 
       {/* Bottom tab bar (phones) */}
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-20 flex border-t-2 border-ink/80 bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         {items.map(({ to, label, Icon, end }) => (
           <NavLink
@@ -64,7 +64,7 @@ export function AppShell() {
             className={({ isActive }) =>
               cx(
                 'flex flex-1 flex-col items-center gap-0.5 py-2 text-meta',
-                isActive ? 'text-accent' : 'text-muted',
+                isActive ? 'font-semibold text-accent' : 'text-muted',
               )
             }
           >

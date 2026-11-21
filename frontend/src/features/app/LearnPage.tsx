@@ -5,6 +5,7 @@ import { ArrowRight, ChevronLeft, Search } from 'lucide-react';
 
 import { useStats } from './data';
 import { sessionUrl } from './HomePage';
+import { Scribble } from './notebook';
 import { usePrefs } from './prefs';
 import { TOPIC_SUGGESTIONS, strings } from './strings';
 
@@ -27,10 +28,12 @@ export function LearnPage() {
         <ChevronLeft size={18} aria-hidden />
         {t.back}
       </button>
-      <h1 className="font-display text-h2">{t.learnTitle}</h1>
+      <h1 className="font-display text-h2 font-bold">
+        <Scribble>{t.learnTitle}</Scribble>
+      </h1>
 
       <form onSubmit={onSubmit} className="space-y-3">
-        <label className="flex h-14 items-center gap-3 rounded-ui border border-line-strong bg-surface px-4 focus-within:border-accent">
+        <label className="sketch flex h-14 items-center gap-3 bg-surface px-4">
           <Search size={20} aria-hidden className="shrink-0 text-muted" />
           <input
             autoFocus
@@ -45,7 +48,7 @@ export function LearnPage() {
         <button
           type="submit"
           disabled={!topic.trim()}
-          className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-accent text-lead text-accent-on disabled:opacity-50"
+          className="inline-flex h-14 w-full items-center justify-center gap-2 sketch bg-accent text-lead font-semibold text-accent-on disabled:opacity-50"
         >
           {t.learnStart}
           <ArrowRight size={18} aria-hidden />
@@ -57,7 +60,7 @@ export function LearnPage() {
           <h2 id="mine-title" className="text-meta text-muted">
             {t.yourTopics}
           </h2>
-          <ul className="mt-2 divide-y divide-line rounded-ui border border-line bg-surface">
+          <ul className="mt-2 sketch-soft divide-y divide-line bg-surface">
             {mine.slice(0, 5).map((tp) => (
               <li key={tp.topic}>
                 <button onClick={() => start(tp.topic)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
@@ -84,7 +87,7 @@ export function LearnPage() {
             <li key={s}>
               <button
                 onClick={() => start(s)}
-                className="h-10 rounded-full border border-line-strong bg-surface px-4 text-body text-ink"
+                className="sketch-soft bg-surface px-4 py-2 text-body text-ink"
               >
                 {s}
               </button>

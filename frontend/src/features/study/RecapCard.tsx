@@ -42,15 +42,15 @@ export function RecapCard({ sessionId, language }: { sessionId: string; language
   if (gaveUp && !recap) return null;
   if (!recap) {
     return (
-      <p role="status" className="animate-pulse text-lead text-muted">
+      <p role="status" className="animate-pulse font-hand text-[24px] leading-7 text-terracotta">
         {t.recapWriting}
       </p>
     );
   }
 
   return (
-    <section aria-labelledby="recap-title" className="rounded-ui border border-line bg-surface p-5">
-      <h2 id="recap-title" className="font-display text-h3 text-ink">
+    <section aria-labelledby="recap-title" className="sketch bg-surface p-5">
+      <h2 id="recap-title" className="font-display text-h3 font-bold text-ink">
         {recap.title || t.recapCovered}
       </h2>
       <p className="mt-2 text-lead text-ink">{recap.summary}</p>
@@ -81,16 +81,16 @@ export function RecapCard({ sessionId, language }: { sessionId: string; language
         </>
       )}
       {recap.help && (
-        <div role="note" className="mt-4 rounded-ui border border-accent bg-accent/10 p-3">
+        <div role="note" className="sketch-soft mt-4 bg-turmeric-soft p-3">
           <h3 className="text-meta text-ink">{t.helpTitle}</h3>
           <p className="mt-1 text-body text-ink">{recap.help}</p>
         </div>
       )}
       {recap.next_time && (
-        <>
-          <h3 className="mt-4 text-meta text-muted">{t.recapNext}</h3>
+        <div className="sticky relative mt-5 rotate-[-1deg] rounded-[3px] px-4 py-3">
+          <h3 className="font-hand text-[22px] leading-6 text-terracotta">{t.recapNext}</h3>
           <p className="mt-1 text-body text-ink">{recap.next_time}</p>
-        </>
+        </div>
       )}
     </section>
   );

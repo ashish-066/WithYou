@@ -24,6 +24,7 @@ import { Check, Mic, MicOff, PhoneOff } from 'lucide-react';
 import { getProgress, type Progress } from '@/services/api';
 import type { BuddyLanguage, SessionMode } from '@/types';
 import { cx } from '@/ui/cx';
+import { Buddy as BuddyFace, type BuddyMood } from '@/features/app/Buddy';
 import { LANGUAGES, labels, saveLanguage } from './labels';
 
 /** Data topic the voice agent listens on (avatar/agents/entrypoint.py LANGUAGE_TOPIC). */
@@ -58,8 +59,8 @@ export function StudyRoom({ serverUrl, token, callId, language, mode, onEnd }: S
       audio={MIC_OPTIONS}
       video={false}
       onDisconnected={onEnd}
-      data-area="app"
-      className="flex h-[100dvh] flex-col bg-canvas text-ink"
+      data-area="notebook"
+      className="paper flex h-[100dvh] flex-col text-ink"
     >
       <Session callId={callId} startLanguage={language} mode={mode} onEnd={onEnd} />
       <RoomAudioRenderer />
@@ -96,8 +97,8 @@ function Session({
     <button
       onClick={() => setConfirmEnd(true)}
       className={cx(
-        'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-body',
-        onVideo ? 'bg-ink/55 text-canvas' : 'border border-line-strong text-ink',
+        'inline-flex h-10 shrink-0 items-center gap-1.5 px-4 text-body',
+        onVideo ? 'rounded-full bg-ink/55 text-canvas' : 'sketch-soft bg-surface text-ink',
       )}
     >
       <PhoneOff size={16} aria-hidden />
@@ -178,7 +179,7 @@ function Session({
       {!talking && <Covered progress={progress} language={language} />}
 
       <main className="flex min-h-0 flex-1 flex-col items-center px-4">
-        <Buddy language={language} />
+        <Buddy language={language} talking={talking} />
         <Transcript language={language} />
       </main>
 
@@ -283,7 +284,7 @@ function Captions({ language }: { language: BuddyLanguage }) {
 }
 
 /** Voice-only: an orb that shows the buddy's state. */
-function Buddy({ language }: { language: BuddyLanguage }) {
+function Buddy({ language, talking }: { language: BuddyLanguage; talking: boolean }) {
   const t = labels(language);
   const { state } = useVoiceAssistant();
   const label =
@@ -294,20 +295,22 @@ function Buddy({ language }: { language: BuddyLanguage }) {
         : state === 'listening'
           ? t.listening
           : t.waiting;
+  // The buddy's face follows the conversation
+  const mood: BuddyMood =
+    state === 'speaking'
+      ? 'speaking'
+      : state === 'thinking'
+        ? 'thinking'
+        : state === 'listening'
+          ? talking
+            ? 'caring'
+            : 'listening'
+          : 'happy';
 
   return (
-    <div className="flex shrink-0 flex-col items-center py-3">
-      <div
-        aria-hidden
-        className={cx(
-          'h-36 w-36 rounded-full border-4 transition-all duration-300 sm:h-44 sm:w-44',
-          state === 'speaking' && 'scale-105 animate-pulse border-accent bg-accent',
-          state === 'thinking' && 'animate-pulse border-accent bg-accent/30',
-          state === 'listening' && 'border-accent bg-accent/10',
-          !['speaking', 'thinking', 'listening'].includes(state) && 'border-line bg-sunken',
-        )}
-      />
-      <p role="status" className="mt-3 text-lead text-muted">
+    <div className="flex shrink-0 flex-col items-center py-2">
+      <BuddyFace mood={mood} size={150} />
+      <p role="status" className="mt-1 font-hand text-[24px] leading-7 text-terracotta">
         {label}
       </p>
     </div>
@@ -335,8 +338,8 @@ function Transcript({ language }: { language: BuddyLanguage }) {
             <li key={line.streamInfo.id} className={cx('flex', mine ? 'justify-end' : 'justify-start')}>
               <div
                 className={cx(
-                  'max-w-[85%] rounded-ui px-3 py-2 text-lead',
-                  mine ? 'bg-accent text-accent-on' : 'border border-line bg-surface text-ink',
+                  'max-w-[85%] px-3.5 py-2 text-lead',
+                  mine ? 'sketch-soft bg-turmeric-soft text-ink' : 'sketch-soft bg-surface text-ink',
                 )}
               >
                 <span className="sr-only">{mine ? t.you : t.buddy}: </span>
@@ -383,7 +386,7 @@ function Controls({
     <footer
       className={cx(
         'flex items-center justify-between gap-3 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3',
-        onVideo ? 'bg-ink/40' : 'border-t border-line bg-surface',
+        onVideo ? 'bg-ink/40' : 'border-t-2 border-ink/80 bg-surface',
       )}
     >
       <div role="radiogroup" aria-label="Language" className="flex gap-1">
@@ -414,7 +417,7 @@ function Controls({
         aria-label={isMicrophoneEnabled ? t.mute : t.unmute}
         className={cx(
           'flex h-16 w-16 shrink-0 items-center justify-center rounded-full',
-          isMicrophoneEnabled ? 'bg-accent text-accent-on' : 'border-2 border-bad text-bad',
+          isMicrophoneEnabled ? 'sketch bg-accent text-accent-on' : 'sketch bg-surface text-bad',
         )}
       >
         {isMicrophoneEnabled ? <Mic size={28} aria-hidden /> : <MicOff size={28} aria-hidden />}

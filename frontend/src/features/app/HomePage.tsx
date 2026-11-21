@@ -1,14 +1,17 @@
 /**
- * Home: greeting, real stats (streak, this week, ideas learned), the two ways
- * to start (study / just talk), quick topics, "pick up where you left off" from
- * the last study session, and a mood check-in that opens a talk session.
+ * Home, as a notebook page: the buddy greets you in a speech bubble, your
+ * streak is a margin note, the two ways to start are drawn boxes, "pick up where
+ * you left off" is a taped sticky note, and topics / moods are drawn chips.
+ * Everything comes from the learner's own history (suggestions, stats).
  */
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, BookOpen, CalendarCheck, Flame, Lightbulb, MessageCircleHeart } from 'lucide-react';
+import { ArrowRight, BookOpen, Flame, MessageCircleHeart } from 'lucide-react';
 
 import { useAuth } from '@/hooks/useAuth';
 import { cx } from '@/ui/cx';
+import { Buddy } from './Buddy';
 import { useSessions, useStats, useSuggestions } from './data';
+import { MarginNote, Scribble, SpeechBubble, StickyNote } from './notebook';
 import { usePrefs } from './prefs';
 import { TOPIC_SUGGESTIONS, partOfDay, strings } from './strings';
 
@@ -25,10 +28,10 @@ export function HomePage() {
   const navigate = useNavigate();
   const stats = useStats();
   const sessions = useSessions();
-  const firstName = (user?.name || '').split(' ')[0];
   const suggestions = useSuggestions();
+  const firstName = (user?.name || '').split(' ')[0];
+
   const lastStudy = sessions.data?.sessions.find((s) => s.mode === 'study' && s.topic);
-  // Pick up where you left off: the newest unfinished topic (already in this language)
   const open = suggestions.data?.continue[0];
   const resume = open
     ? {
@@ -40,7 +43,6 @@ export function HomePage() {
     : lastStudy
       ? { topic: lastStudy.topic!, understood: lastStudy.ideas_understood, total: lastStudy.ideas_total, note: lastStudy.next_time }
       : null;
-  // For you: other unfinished topics + topics the buddy suggested next; defaults for new learners
   const personal = [
     ...(suggestions.data?.continue.slice(1).map((c) => c.topic) ?? []),
     ...(suggestions.data?.next_topics ?? []),
@@ -48,102 +50,111 @@ export function HomePage() {
   const quick = personal.length ? personal.slice(0, 8) : TOPIC_SUGGESTIONS[language];
 
   return (
-    <div className="space-y-7">
-      <header className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-body text-muted">{new Date().toLocaleDateString(language, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-          <h1 className="mt-0.5 font-display text-h2">{t.greet(partOfDay(), firstName)}</h1>
-        </div>
+    <div className="space-y-8">
+      {/* date + me */}
+      <header className="flex items-center justify-between">
+        <MarginNote>
+          {new Date().toLocaleDateString(language, { weekday: 'long', day: 'numeric', month: 'long' })}
+        </MarginNote>
         <Link
           to="/me"
           aria-label={t.nav.profile}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-lead text-accent-on"
+          className="sketch flex h-11 w-11 items-center justify-center bg-turmeric-soft font-display text-lead font-bold text-ink"
         >
           {(firstName[0] || 'S').toUpperCase()}
         </Link>
       </header>
 
-      {/* Stats: three tiles in a row (flex, not a grid) */}
-      <section aria-label={t.nav.progress} className="flex gap-2">
-        <Stat Icon={Flame} value={stats.data ? t.streak(stats.data.streak_days) : '–'} label={t.streakLabel} />
-        <Stat Icon={CalendarCheck} value={stats.data ? String(stats.data.sessions_this_week) : '–'} label={t.weekLabel} />
-        <Stat Icon={Lightbulb} value={stats.data ? String(stats.data.ideas_understood) : '–'} label={t.ideasLabel} />
+      {/* the buddy says hello */}
+      <section className="flex items-end gap-2">
+        <Buddy mood="happy" size={112} className="-mb-1 shrink-0" />
+        <SpeechBubble className="mb-10 min-w-0 flex-1">
+          <p className="font-display text-h3 font-bold leading-tight">{t.greet(partOfDay(), firstName)}!</p>
+          <p className="mt-0.5 text-lead text-muted">{t.heroAsk}</p>
+        </SpeechBubble>
       </section>
 
-      {/* The two ways to start */}
-      <section className="flex flex-col gap-3">
+      {stats.data && stats.data.sessions_total > 0 && (
+        <p className="-mt-4 flex items-start gap-2 text-body text-ink">
+          <Flame size={18} aria-hidden className="mt-0.5 shrink-0 text-terracotta" />
+          {t.streakLine(stats.data.streak_days, stats.data.sessions_this_week, stats.data.ideas_understood)}
+        </p>
+      )}
+
+      {/* two ways to start: drawn boxes */}
+      <section className="space-y-4">
         <button
           onClick={() => navigate('/learn')}
-          className="group rounded-ui bg-accent p-5 text-left text-accent-on"
+          className="sketch group flex w-full items-center gap-4 bg-accent px-5 py-5 text-left text-accent-on transition-transform active:translate-y-0.5"
         >
-          <div className="flex items-start justify-between gap-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-on/15">
-              <BookOpen size={26} aria-hidden />
-            </span>
-            <ArrowRight size={22} aria-hidden className="mt-1 transition-transform group-hover:translate-x-1" />
-          </div>
-          <h2 className="mt-4 font-display text-h3">{t.studyTitle}</h2>
-          <p className="mt-1 text-body opacity-90">{t.studyBody}</p>
+          <BookOpen size={34} aria-hidden className="shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-h3 font-bold">{t.studyTitle}</span>
+            <span className="block text-body opacity-90">{t.studyBody}</span>
+          </span>
+          <ArrowRight size={22} aria-hidden className="shrink-0 transition-transform group-hover:translate-x-1" />
         </button>
-
         <button
           onClick={() => navigate(sessionUrl('talk'))}
-          className="group rounded-ui border border-line bg-surface p-5 text-left text-ink"
+          className="sketch group flex w-full items-center gap-4 bg-surface px-5 py-5 text-left text-ink transition-transform active:translate-y-0.5"
         >
-          <div className="flex items-start justify-between gap-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
-              <MessageCircleHeart size={26} aria-hidden />
-            </span>
-            <ArrowRight size={22} aria-hidden className="mt-1 text-muted transition-transform group-hover:translate-x-1" />
-          </div>
-          <h2 className="mt-4 font-display text-h3">{t.talkTitle}</h2>
-          <p className="mt-1 text-body text-muted">{t.talkBody}</p>
+          <MessageCircleHeart size={34} aria-hidden className="shrink-0 text-terracotta" />
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-h3 font-bold">{t.talkTitle}</span>
+            <span className="block text-body text-muted">{t.talkBody}</span>
+          </span>
+          <ArrowRight size={22} aria-hidden className="shrink-0 transition-transform group-hover:translate-x-1" />
         </button>
       </section>
 
-      {/* Pick up where you left off */}
+      {/* pick up where you left off: a sticky note */}
       {resume && (
-        <section aria-labelledby="continue-title" className="rounded-ui border border-line bg-surface p-5">
-          <h2 id="continue-title" className="text-meta text-muted">
-            {t.continueTitle}
-          </h2>
-          <p className="mt-1 font-display text-h3">{resume.topic}</p>
-          {resume.total > 0 && (
-            <>
-              <div
-                className="mt-3 h-2 overflow-hidden rounded-full bg-sunken"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={resume.total}
-                aria-valuenow={resume.understood}
-              >
-                <div className="h-full rounded-full bg-accent" style={{ width: `${(100 * resume.understood) / resume.total}%` }} />
+        <section aria-labelledby="continue-title" className="px-1 pt-2">
+          <StickyNote tilt={-1.2}>
+            <h2 id="continue-title" className="font-hand text-[22px] leading-6 text-terracotta">
+              {t.continueTitle}
+            </h2>
+            <p className="mt-1 font-display text-h3 font-bold text-ink">{resume.topic}</p>
+            {resume.total > 0 && (
+              <div className="mt-2 flex items-center gap-2">
+                <span className="flex gap-1.5" aria-label={t.ideasOf(resume.understood, resume.total)}>
+                  {Array.from({ length: resume.total }, (_, i) => (
+                    <span
+                      key={i}
+                      className={cx(
+                        'h-3.5 w-3.5 rounded-full border-2 border-ink/80',
+                        i < resume.understood ? 'bg-accent' : 'bg-transparent',
+                      )}
+                    />
+                  ))}
+                </span>
+                <span className="text-meta text-muted">{t.ideasOf(resume.understood, resume.total)}</span>
               </div>
-              <p className="mt-1.5 text-meta text-muted">{t.ideasOf(resume.understood, resume.total)}</p>
-            </>
-          )}
-          {resume.note && <p className="mt-3 text-body text-ink">{resume.note}</p>}
-          <button
-            onClick={() => navigate(sessionUrl('study', resume.topic))}
-            className="mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-body text-canvas"
-          >
-            {t.continueCta}
-            <ArrowRight size={16} aria-hidden />
-          </button>
+            )}
+            {resume.note && <p className="mt-2 text-body text-ink">{resume.note}</p>}
+            <button
+              onClick={() => navigate(sessionUrl('study', resume.topic))}
+              className="mt-4 inline-flex items-center gap-1.5 font-display text-lead font-bold text-accent underline decoration-2 underline-offset-4"
+            >
+              {t.continueCta}
+              <ArrowRight size={18} aria-hidden />
+            </button>
+          </StickyNote>
         </section>
       )}
 
-      {/* Quick topics */}
+      {/* for you */}
       <section aria-labelledby="quick-title">
-        <h2 id="quick-title" className="text-meta text-muted">
-          {personal.length ? t.forYou : t.quickTopics}
+        <h2 id="quick-title" className="font-display text-h3 font-bold">
+          <Scribble>{personal.length ? t.forYou : t.quickTopics}</Scribble>
         </h2>
-        <ul className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1">
-          {quick.map((topic) => (
-            <li key={topic} className="shrink-0">
+        <ul className="mt-4 flex flex-wrap gap-2.5">
+          {quick.map((topic, i) => (
+            <li key={topic}>
               <button
                 onClick={() => navigate(sessionUrl('study', topic))}
-                className="h-10 rounded-full border border-line-strong bg-surface px-4 text-body text-ink"
+                className="sketch-soft bg-surface px-4 py-2 text-body text-ink transition-transform hover:-rotate-1"
+                style={{ transform: `rotate(${(i % 3) - 1}deg)` }}
               >
                 {topic}
               </button>
@@ -152,17 +163,17 @@ export function HomePage() {
         </ul>
       </section>
 
-      {/* Mood check-in: opens a talk session that starts from the feeling */}
+      {/* mood check-in */}
       <section aria-labelledby="mood-title">
-        <h2 id="mood-title" className="text-meta text-muted">
-          {t.moodTitle}
+        <h2 id="mood-title" className="font-display text-h3 font-bold">
+          <Scribble color="terracotta">{t.moodTitle}</Scribble>
         </h2>
-        <ul className="mt-2 flex flex-wrap gap-2">
+        <ul className="mt-4 flex flex-wrap gap-2.5">
           {t.moods.map((m) => (
             <li key={m.id}>
               <button
                 onClick={() => navigate(sessionUrl('talk', m.label))}
-                className={cx('h-10 rounded-full border border-accent/40 bg-accent/5 px-4 text-body text-ink')}
+                className="sketch-soft bg-turmeric-soft px-4 py-2 text-body text-ink transition-transform hover:rotate-1"
               >
                 {m.label}
               </button>
@@ -170,16 +181,6 @@ export function HomePage() {
           ))}
         </ul>
       </section>
-    </div>
-  );
-}
-
-function Stat({ Icon, value, label }: { Icon: typeof Flame; value: string; label: string }) {
-  return (
-    <div className="min-w-0 flex-1 rounded-ui border border-line bg-surface px-3 py-3">
-      <Icon size={18} aria-hidden className="text-accent" />
-      <p className="mt-1.5 truncate font-display text-h3">{value}</p>
-      <p className="truncate text-meta text-muted">{label}</p>
     </div>
   );
 }

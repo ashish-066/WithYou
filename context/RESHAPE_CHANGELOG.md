@@ -327,3 +327,4 @@ Next:
 - an SVG buddy character with expressions (happy / listening / thinking / speaking / caring) for Home and voice sessions
 - notebook-style Home (speech-bubble greeting, sticky-note "next time", margin-note streak), diary-style History, hand-plotted Insights, a notebook login
 - screenshots, then commit
+- Phase 8 done: buddy character (`features/app/Buddy.tsx`: happy, listening, thinking, speaking, caring, wave) on Login, Home, the session screens (its face follows the voice state instead of the orb) and the desktop rail; notebook primitives (`features/app/notebook.tsx`: SpeechBubble, StickyNote with tape, Scribble underline, MarginNote); paper + margin line on every screen; drawn boxes and buttons on Learn, History, Insights, Profile, the recap ("next time" is a sticky note). Build and UI rules pass; checked by screenshots at 390×844.

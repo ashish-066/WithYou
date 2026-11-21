@@ -64,6 +64,9 @@ export type Strings = {
   learningTitle: string;
   privateNote: string;
   helpNudge: string;
+  heroAsk: string;
+  streakLine: (days: number, week: number, concepts: number) => string;
+  noteNext: string;
 };
 
 const en: Strings = {
@@ -126,6 +129,9 @@ const en: Strings = {
         : `You've mostly seemed ${common} lately.`,
   learningTitle: 'Learning level',
   privateNote: "Only you can see this. It's your buddy's gentle read, not a diagnosis.",
+  heroAsk: 'What shall we do today?',
+  streakLine: (d, w, c) => `${d} day${d === 1 ? '' : 's'} in a row · ${w} this week · ${c} concepts`,
+  noteNext: 'note to self',
   helpNudge: 'Some days have felt really heavy. You are not alone: talk to someone you trust, or call Tele-MANAS 14416.',
   profileTitle: 'Me',
   language: 'Language',
@@ -201,6 +207,9 @@ const te: Strings = {
         : `ఈ మధ్య ఎక్కువగా ${common} ఉన్నావు.`,
   learningTitle: 'నేర్చుకునే స్థాయి',
   privateNote: 'ఇది నీకు మాత్రమే కనిపిస్తుంది. ఇది నీ బడ్డీ అభిప్రాయం మాత్రమే, డయాగ్నోసిస్ కాదు.',
+  heroAsk: 'ఈ రోజు ఏం చేద్దాం?',
+  streakLine: (d, w, c) => `వరుసగా ${d} రోజులు · ఈ వారం ${w} · ${c} కాన్సెప్ట్స్`,
+  noteNext: 'గుర్తుంచుకో',
   helpNudge: 'కొన్ని రోజులు చాలా భారంగా అనిపించాయి. నువ్వు ఒంటరివి కాదు: నమ్మే వాళ్ళతో మాట్లాడు, లేదా Tele-MANAS 14416 కి కాల్ చేయి.',
   profileTitle: 'నేను',
   language: 'భాష',
@@ -276,6 +285,9 @@ const ml: Strings = {
         : `ഈയിടെ കൂടുതലും ${common} ആയിരുന്നു.`,
   learningTitle: 'പഠന നില',
   privateNote: 'ഇത് നിനക്ക് മാത്രമേ കാണാനാകൂ. ഇത് കൂട്ടുകാരന്റെ ഒരു തോന്നൽ മാത്രം, രോഗനിർണയമല്ല.',
+  heroAsk: 'ഇന്ന് എന്താ ചെയ്യേണ്ടത്?',
+  streakLine: (d, w, c) => `തുടർച്ചയായി ${d} ദിവസം · ഈ ആഴ്ച ${w} · ${c} കൺസെപ്റ്റുകൾ`,
+  noteNext: 'ഓർമ്മയ്ക്ക്',
   helpNudge: 'ചില ദിവസങ്ങൾ വല്ലാതെ ഭാരമുള്ളതായി തോന്നി. നീ ഒറ്റയ്ക്കല്ല: വിശ്വസിക്കുന്ന ആരോടെങ്കിലും സംസാരിക്കൂ, അല്ലെങ്കിൽ Tele-MANAS 14416 ൽ വിളിക്കൂ.',
   profileTitle: 'ഞാൻ',
   language: 'ഭാഷ',

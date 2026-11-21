@@ -7,6 +7,7 @@ import { LANGUAGES } from '@/features/study/labels';
 import { cx } from '@/ui/cx';
 import { useStats } from './data';
 import { sessionUrl } from './HomePage';
+import { Scribble } from './notebook';
 import { usePrefs, type Voice } from './prefs';
 import { strings } from './strings';
 
@@ -19,7 +20,9 @@ export function ProgressPage() {
   return (
     <div className="space-y-7">
       <header>
-        <h1 className="font-display text-h2">{t.insightsTitle}</h1>
+        <h1 className="font-display text-h2 font-bold">
+        <Scribble>{t.insightsTitle}</Scribble>
+      </h1>
         <p className="mt-1 flex items-start gap-1.5 text-meta text-muted">
           <Lock size={14} aria-hidden className="mt-0.5 shrink-0" />
           {t.privateNote}
@@ -29,13 +32,13 @@ export function ProgressPage() {
       {data && (
         <>
           {/* Streak + last 14 days */}
-          <section className="rounded-ui border border-line bg-surface p-5">
+          <section className="sketch-soft bg-surface p-5">
             <div className="flex items-center gap-3">
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-accent-on">
                 <Flame size={24} aria-hidden />
               </span>
               <div>
-                <p className="font-display text-h2">{t.streak(data.streak_days)}</p>
+                <p className="font-display text-h2 font-bold">{t.streak(data.streak_days)}</p>
                 <p className="text-meta text-muted">{t.streakLabel}</p>
               </div>
             </div>
@@ -58,7 +61,7 @@ export function ProgressPage() {
           </section>
 
           {/* How you've been feeling */}
-          <section aria-labelledby="feeling-title" className="rounded-ui border border-line bg-surface p-5">
+          <section aria-labelledby="feeling-title" className="sketch-soft bg-surface p-5">
             <h2 id="feeling-title" className="flex items-center gap-2 font-display text-h3">
               <HeartPulse size={20} aria-hidden className="text-accent" />
               {t.feelingTitle}
@@ -74,7 +77,7 @@ export function ProgressPage() {
               <p className="mt-2 text-body text-muted">{t.feelingEmpty}</p>
             )}
             {data.crisis_recent && (
-              <a href="tel:14416" className="mt-4 flex items-start gap-3 rounded-ui border border-accent bg-accent/10 p-3 text-body text-ink">
+              <a href="tel:14416" className="mt-4 flex items-start gap-3 sketch-soft bg-turmeric-soft p-3 text-body text-ink">
                 <Phone size={18} aria-hidden className="mt-0.5 shrink-0 text-accent" />
                 {t.helpNudge}
               </a>
@@ -89,12 +92,12 @@ export function ProgressPage() {
 
           {/* Learning level per topic */}
           <section aria-labelledby="topics-title">
-            <h2 id="topics-title" className="font-display text-h3">
+            <h2 id="topics-title" className="font-display text-h3 font-bold">
               {t.learningTitle}
             </h2>
             <p className="mt-1 text-meta text-muted">{t.conceptsHelp}</p>
             {data.topics.length === 0 ? (
-              <p className="mt-3 rounded-ui border border-dashed border-line-strong p-5 text-body text-muted">
+              <p className="mt-3 sketch-soft border-dashed p-5 text-body text-muted">
                 {t.progressEmpty}
               </p>
             ) : (
@@ -105,7 +108,7 @@ export function ProgressPage() {
                     <li key={tp.topic}>
                       <button
                         onClick={() => navigate(sessionUrl('study', tp.topic))}
-                        className="w-full rounded-ui border border-line bg-surface px-4 py-3 text-left"
+                        className="w-full sketch-soft bg-surface px-4 py-3 text-left"
                       >
                         <span className="flex items-center justify-between gap-3">
                           <span className="truncate text-lead text-ink">{tp.topic}</span>
@@ -188,8 +191,8 @@ export function LevelBadge({ level, label }: { level: 'just_started' | 'getting_
 
 function Tile({ value, label }: { value: number; label: string }) {
   return (
-    <div className="min-w-0 flex-1 rounded-ui border border-line bg-surface px-3 py-3">
-      <p className="font-display text-h2">{value}</p>
+    <div className="min-w-0 flex-1 sketch-soft bg-surface px-3 py-3">
+      <p className="font-display text-h2 font-bold">{value}</p>
       <p className="truncate text-meta text-muted">{label}</p>
     </div>
   );
@@ -209,7 +212,7 @@ export function ProfilePage() {
           {(user?.name?.[0] || 'S').toUpperCase()}
         </span>
         <div className="min-w-0">
-          <h1 className="truncate font-display text-h2">{user?.name}</h1>
+          <h1 className="truncate font-display text-h2 font-bold">{user?.name}</h1>
           <p className="truncate text-body text-muted">{user?.email}</p>
         </div>
       </header>
@@ -227,7 +230,7 @@ export function ProfilePage() {
         onChange={(v) => setVoice(v as Voice)}
       />
 
-      <section aria-labelledby="help-title" className="rounded-ui border border-accent/40 bg-accent/5 p-5">
+      <section aria-labelledby="help-title" className="sketch bg-turmeric-soft p-5">
         <h2 id="help-title" className="flex items-center gap-2 font-display text-h3">
           <LifeBuoy size={20} aria-hidden className="text-accent" />
           {t.helpTitle}
@@ -235,7 +238,7 @@ export function ProfilePage() {
         <p className="mt-2 text-body text-ink">{t.helpBody}</p>
         <a
           href="tel:14416"
-          className="mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-accent px-5 text-body text-accent-on"
+          className="mt-4 inline-flex h-11 items-center gap-2 sketch bg-accent px-5 text-body font-semibold text-accent-on"
         >
           <Phone size={16} aria-hidden />
           {t.helpCall}
@@ -247,7 +250,7 @@ export function ProfilePage() {
           await logout();
           navigate('/login');
         }}
-        className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong px-5 text-body text-ink"
+        className="inline-flex h-11 items-center gap-2 sketch-soft bg-surface px-5 text-body text-ink"
       >
         <LogOut size={16} aria-hidden />
         {t.signOut}
@@ -270,7 +273,7 @@ function Choice({
   return (
     <fieldset>
       <legend className="text-meta text-muted">{title}</legend>
-      <div role="radiogroup" className="mt-2 divide-y divide-line rounded-ui border border-line bg-surface">
+      <div role="radiogroup" className="mt-2 sketch-soft divide-y divide-line bg-surface">
         {options.map((o) => (
           <button
             key={o.id}
