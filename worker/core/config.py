@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     sarvam_llm_model: str = "sarvam-105b"
     sarvam_reasoning_effort: str = "none"
     sarvam_llm_timeout_seconds: float = 8.0
-    # Default language when a session didn't say: ml-IN | te-IN | en-IN
+    # Default language when a session didn't say: ml-IN | te-IN | ta-IN | hi-IN | en-IN
     buddy_language: str = "ml-IN"
     # Scoring pipeline (JD parse, ladders, question selection, evidence): fail fast
     # instead of holding the worker while Gemini is slow. Each step has a fallback.

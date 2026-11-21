@@ -13,7 +13,7 @@
 
 /*
  * Study buddy ("notebook" area): rounded, friendly Indic lettering + a hand-
- * written accent. Baloo Tammudu 2 (Telugu + Latin), Baloo Chettan 2 (Malayalam),
+ * written accent. Baloo Tammudu 2 (Telugu + Latin), Baloo Chettan 2 (Malayalam), Baloo Thambi 2 (Tamil), Baloo 2 (Hindi/Devanagari),
  * Fraunces italic (the buddy's warm accent).
  */
 @import '@fontsource/baloo-tammudu-2/400.css';
@@ -24,4 +24,10 @@
 @import '@fontsource/baloo-chettan-2/500.css';
 @import '@fontsource/baloo-chettan-2/600.css';
 @import '@fontsource/baloo-chettan-2/700.css';
+@import '@fontsource/baloo-thambi-2/400.css';
+@import '@fontsource/baloo-thambi-2/600.css';
+@import '@fontsource/baloo-thambi-2/700.css';
+@import '@fontsource/baloo-2/400.css';
+@import '@fontsource/baloo-2/600.css';
+@import '@fontsource/baloo-2/700.css';
 @import '@fontsource-variable/fraunces/full-italic.css';

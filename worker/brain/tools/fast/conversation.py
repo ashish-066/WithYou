@@ -130,14 +130,18 @@ LANGUAGE_RULES = {
     + "Reply in Malayalam.",
     "te-IN": _NATIVE_STYLE.format(name="Telugu", informal='use "నువ్వు" (never "మీరు")')
     + "Reply in Telugu.",
+    "ta-IN": _NATIVE_STYLE.format(name="Tamil", informal='use "நீ" (never "நீங்கள்"), spoken Tamil not formal written Tamil')
+    + "Reply in Tamil.",
+    "hi-IN": _NATIVE_STYLE.format(name="Hindi", informal='use "तुम" (never "आप"), everyday Hindi not shuddh Hindi')
+    + "Reply in Hindi, in Devanagari script.",
 }
 SWITCH_RULE = (
     " The learner's words come from speech recognition and may contain mistakes, or even "
     "appear in the wrong script (for example Telugu speech written in Kannada letters). "
     "Understand them as best you can, but never copy a wrong script: always write your reply "
     "in the language above, in its own script. Only change language if the learner clearly "
-    "asks you to (\"speak Malayalam\", \"తెలుగులో చెప్పు\", \"English please\"); then reply "
-    "in the language they asked for (Malayalam, Telugu or English) from then on."
+    "asks you to (\"speak Malayalam\", \"తెలుగులో చెప్పు\", \"தமிழ்ல சொல்லு\", \"हिंदी में बोलो\", \"English please\"); then reply "
+    "in the language they asked for (Malayalam, Telugu, Tamil, Hindi or English) from then on."
 )
 
 

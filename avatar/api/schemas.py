@@ -9,7 +9,7 @@ class CreateCallRequest(BaseModel):
     """Request to start a study session (signed-in learner only)."""
 
     # Starting language; the learner can switch by speaking another one
-    language: Literal["ml-IN", "te-IN", "en-IN"] = Field(
+    language: Literal["ml-IN", "te-IN", "ta-IN", "hi-IN", "en-IN"] = Field(
         default="ml-IN", description="Language the buddy starts in"
     )
     # "study" (teach + gentle checks) or "talk" (just talk: a warm listener)

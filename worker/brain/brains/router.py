@@ -111,6 +111,9 @@ PATTERNS: dict[str, list[PatternConfig]] = {
         # Telugu / Malayalam (no \b: word boundaries break inside Indic words)
         PatternConfig(r"(బై|ఆపేద్దాం|ఆపుదాం|ఇక చాలు|ఈ రోజుకి చాలు|ఇంక చాలు)", 0.95, is_strong=True),
         PatternConfig(r"(ബൈ|നിർത്താം|ഇന്നത്തേക്ക് മതി)", 0.95, is_strong=True),
+        # Tamil / Hindi
+        PatternConfig(r"((^|\s)பை([\s.!?]|$)|நிறுத்தலாம்|நிறுத்திக்கலாம்|இன்னைக்கு போதும்|இதோட போதும்)", 0.95, is_strong=True),
+        PatternConfig(r"(बाय|यहीं रुकते|आज के लिए इतना|बस इतना ही|ख़त्म करते|खत्म करते)", 0.95, is_strong=True),
     ],
     # Learner wants a topic explained / taught (fast brain, explain mode)
     "explain_request": [
@@ -125,6 +128,10 @@ PATTERNS: dict[str, list[PatternConfig]] = {
         # Telugu: tell / explain / teach / what is / how / why / didn't understand
         PatternConfig(r"(చెప్పు|చెప్పండి|వివరించు|వివరించండి|నేర్పించు|నేర్పు|అంటే ఏమిటి|అంటే ఏంటి|ఎలా|ఎందుకు|అర్థం కాలేదు)", 0.90, is_strong=True),
         # Malayalam: tell me / explain / teach / what is / how / why / didn't understand
+        # Tamil: explain / tell me / teach / what is / how / why / didn't understand
+        PatternConfig(r"(விளக்கு|சொல்லு|சொல்லித் தா|சொல்லித்தா|கத்துக்கொடு|என்னது|என்ன அது|எப்படி|ஏன்|புரியல|புரியவில்லை)", 0.90, is_strong=True),
+        # Hindi: explain / tell / teach / what is / how / why / didn't understand
+        PatternConfig(r"(समझाओ|समझा दो|बताओ|बता दो|सिखाओ|क्या है|क्या होता|कैसे|क्यों|समझ नहीं आया|समझ नहीं आ)", 0.90, is_strong=True),
         PatternConfig(r"(പറഞ്ഞുതരാമോ|പറഞ്ഞു തരാമോ|പറഞ്ഞുതരൂ|വിശദീകരിക്ക|പഠിപ്പിക്ക|എന്താണ്|എങ്ങനെ|എന്തുകൊണ്ട്|മനസ്സിലായില്ല)", 0.90, is_strong=True),
     ],
     # Learner asks to be checked (fast brain, check mode: one gentle question)
@@ -133,6 +140,8 @@ PATTERNS: dict[str, list[PatternConfig]] = {
         PatternConfig(r"\bask me (a |some )?(question|questions)\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
         PatternConfig(r"\b(practice|revision) (question|questions)\b", 0.90, is_strong=True),
         PatternConfig(r"(క్విజ్|ప్రశ్న అడుగు|ప్రశ్నలు అడుగు|టెస్ట్ చేయి|పరీక్ష పెట్టు)", 0.95, is_strong=True),
+        PatternConfig(r"(க்விஸ்|கேள்வி கேளு|கேள்விகள் கேளு|டெஸ்ட் பண்ணு|டெஸ்ட் வை)", 0.95, is_strong=True),
+        PatternConfig(r"(क्विज़|क्विज|सवाल पूछो|प्रश्न पूछो|टेस्ट लो|टेस्ट करो)", 0.95, is_strong=True),
         PatternConfig(r"(ക്വിസ്|ചോദ്യം ചോദിക്ക|ചോദ്യങ്ങൾ ചോദിക്ക|ടെസ്റ്റ് ചെയ്യ|പരീക്ഷിക്ക)", 0.95, is_strong=True),
     ],
     # Report requests (slow brain)

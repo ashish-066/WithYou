@@ -106,3 +106,14 @@ def test_teach_greeting():
     assert "Gravity" in greeting("en-IN", "study", "Gravity", "teach")
     assert "teacher" not in greeting("en-IN", "study", "Gravity")
     assert "teacher" not in greeting("en-IN", "talk", "tired", "teach")
+
+
+def test_tamil_and_hindi():
+    from agents.language import SUPPORTED, greeting, language_of, normalize
+
+    assert {"ta-IN", "hi-IN"} <= set(SUPPORTED)
+    assert language_of("வணக்கம் நண்பா") == "ta-IN"
+    assert language_of("नमस्ते दोस्त") == "hi-IN"
+    assert normalize("ta") == "ta-IN" and normalize("hi-IN") == "hi-IN"
+    assert "{topic}" not in greeting("ta-IN", "study", "Gravity")
+    assert "Gravity" in greeting("hi-IN", "study", "Gravity", "teach")

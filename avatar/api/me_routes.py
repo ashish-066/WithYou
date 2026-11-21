@@ -30,7 +30,7 @@ from services.translate import translate, translate_many
 router = APIRouter(prefix="/me", tags=["Learner"])
 
 LOCAL = ZoneInfo("Asia/Kolkata")  # days count in the learner's local time
-LANGS = ("ml-IN", "te-IN", "en-IN")
+LANGS = ("ml-IN", "te-IN", "ta-IN", "hi-IN", "en-IN")
 # Brain defaults that were never real topics
 PLACEHOLDER_TOPICS = {"not chosen yet", "general", "introduction", ""}
 

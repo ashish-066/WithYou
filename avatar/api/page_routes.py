@@ -29,9 +29,9 @@ router = APIRouter(prefix="/pages", tags=["Pages"])
 
 PAGE_TTL = 24 * 3600
 MAX_IMAGE_BYTES = 6 * 1024 * 1024
-LANGUAGE_NAMES = {"ml-IN": "Malayalam", "te-IN": "Telugu", "en-IN": "English"}
+LANGUAGE_NAMES = {"ml-IN": "Malayalam", "te-IN": "Telugu", "ta-IN": "Tamil", "hi-IN": "Hindi", "en-IN": "English"}
 
-PROMPT = """This is a photo of a school textbook or notes page (it may be in English, Malayalam or Telugu).
+PROMPT = """This is a photo of a school textbook or notes page (it may be in English, Malayalam, Telugu, Tamil or Hindi).
 Read it and return JSON only:
 {{
   "is_study_page": true/false,   // false if it is not study material or unreadable

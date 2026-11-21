@@ -389,7 +389,7 @@ function Controls({
         onVideo ? 'bg-ink/40' : 'border-t-2 border-ink/80 bg-surface',
       )}
     >
-      <div role="radiogroup" aria-label="Language" className="flex gap-1">
+      <div role="radiogroup" aria-label="Language" className="-mx-1 flex min-w-0 gap-1 overflow-x-auto px-1 py-1">
         {LANGUAGES.map((l) => (
           <button
             key={l.code}
@@ -397,7 +397,7 @@ function Controls({
             aria-checked={language === l.code}
             onClick={() => switchTo(l.code)}
             className={cx(
-              'h-10 min-w-11 rounded-full px-3 text-body',
+              'h-10 min-w-10 shrink-0 rounded-full px-2.5 text-body',
               language === l.code
                 ? onVideo
                   ? 'bg-canvas text-ink'

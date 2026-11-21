@@ -107,7 +107,7 @@ class Settings(BaseSettings):
 
     # Agent Configuration
     agent_name: str = "Study Buddy"
-    # Starting language when the call didn't choose one: ml-IN | te-IN | en-IN
+    # Starting language when the call didn't choose one: ml-IN | te-IN | ta-IN | hi-IN | en-IN
     buddy_language: str = "ml-IN"
     # The voice agent registers under this name and is dispatched explicitly to
     # each call's room, so no other agent on the same LiveKit project takes it

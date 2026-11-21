@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 # Messages that come from the candidate's side of the call
 # Languages the buddy speaks (BCP-47, as Sarvam reports them)
-SUPPORTED_LANGUAGES = {"ml-IN", "te-IN", "en-IN"}
+SUPPORTED_LANGUAGES = {"ml-IN", "te-IN", "ta-IN", "hi-IN", "en-IN"}
 
 CANDIDATE_TURN_TYPES = {"candidate_response", "question_unanswered", "candidate_returned"}
 

@@ -12,7 +12,7 @@ export interface CallResponse {
 }
 
 /** Starting language; the learner can switch by speaking another one. */
-export type BuddyLanguage = 'ml-IN' | 'te-IN' | 'en-IN';
+export type BuddyLanguage = 'ml-IN' | 'te-IN' | 'ta-IN' | 'hi-IN' | 'en-IN';
 
 /** Study (teach + gentle checks) or just talk (a warm listener). */
 export type StudyStyle = 'learn' | 'teach';

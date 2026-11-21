@@ -43,7 +43,7 @@ from scoring.question_selector import QuestionSelector
 logger = logging.getLogger(__name__)
 
 MAX_FOLLOWUPS_PER_POINT = 1
-LANGUAGE_NAMES = {"te-IN": "Telugu", "ml-IN": "Malayalam", "en-IN": "English"}
+LANGUAGE_NAMES = {"te-IN": "Telugu", "ml-IN": "Malayalam", "ta-IN": "Tamil", "hi-IN": "Hindi", "en-IN": "English"}
 
 # Priority weights (question selector): a missed idea first, then a half-shown
 # one, then one not yet touched

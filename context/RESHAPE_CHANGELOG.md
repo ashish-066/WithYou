@@ -354,3 +354,10 @@ Next:
 - The demo learner was copied (only their organisation, user and 8 sessions). Checked: all 7 services healthy, the agent registered with LiveKit (India South), login works, the photo feature works on the live site.
 - **The laptop's agent must not run at the same time** (same LiveKit project and agent name: LiveKit could give a call to the laptop).
 - Teardown: terminate `i-0611864ba60c5c91a`, release `eipalloc-0eb599900b9982454`, then delete `sg-08444f2c795ae8ce7` and key pair `study-buddy`.
+
+## Tamil and Hindi (2026-11-22)
+- New languages `ta-IN` and `hi-IN` everywhere the first three are: API checks, voice agent (greetings, topic / talk / mood / teach greetings, nudges, "switched" lines; Tamil and Devanagari script detection so the voice follows the reply), brain (informal நீ / तुम, spoken not formal style), voice switching ("தமிழ்ல சொல்லு", "हिंदी में बोलो", "speak tamil"), goodbyes + yes/no, explain/quiz intents, recap fallback text, helpline text, talk goodbyes, photo reading, and the app (about 200 phrases each, language buttons, topic suggestions, Baloo Thambi 2 + Baloo 2 fonts).
+- Tamil "bye" (பை) only counts as a whole word: it is inside பையன் ("boy").
+- **Needs a native speaker's review before real students use it:** the Tamil and Hindi crisis phrases in `worker/brain/talk.py` (safety), and the app/buddy wording.
+- Live checks: Sarvam-105B replies naturally in both (Hindi mixes in some English, which is normal Hinglish); Bulbul v3 Kavya speaks both. Tests: worker 143, API 72.
+- In the study room the five language buttons scroll sideways if the screen is narrow.

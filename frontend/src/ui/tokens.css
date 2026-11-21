@@ -110,9 +110,9 @@
   --c-turmeric-soft: 252 236 186;
   --c-terracotta: 194 96 63;
   --c-margin: 226 150 138; /* the red margin line */
-  --font-display: 'Baloo Tammudu 2', 'Baloo Chettan 2', Georgia, serif;
-  --font-ui: 'Baloo Tammudu 2', 'Baloo Chettan 2', 'Instrument Sans Variable', sans-serif;
-  --font-hand: 'Fraunces Variable', 'Baloo Tammudu 2', 'Baloo Chettan 2', Georgia, serif;
+  --font-display: 'Baloo Tammudu 2', 'Baloo Chettan 2', 'Baloo Thambi 2', 'Baloo 2', Georgia, serif;
+  --font-ui: 'Baloo Tammudu 2', 'Baloo Chettan 2', 'Baloo Thambi 2', 'Baloo 2', 'Instrument Sans Variable', sans-serif;
+  --font-hand: 'Fraunces Variable', 'Baloo Tammudu 2', 'Baloo Chettan 2', 'Baloo Thambi 2', 'Baloo 2', Georgia, serif;
   --radius: 14px;
   color-scheme: light;
   font-size: 15px;
