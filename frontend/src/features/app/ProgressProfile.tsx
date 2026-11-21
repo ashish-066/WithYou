@@ -165,7 +165,7 @@ function Tile({ value, label }: { value: number; label: string }) {
   return (
     <div className="min-w-0 flex-1 sketch-soft bg-surface px-3 py-3">
       <p className="font-display text-h2 font-bold">{value}</p>
-      <p className="truncate text-meta text-muted">{label}</p>
+      <p className="truncate text-meta leading-6 text-muted">{label}</p>
     </div>
   );
 }

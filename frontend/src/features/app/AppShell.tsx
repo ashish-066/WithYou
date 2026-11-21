@@ -69,7 +69,7 @@ export function AppShell() {
             }
           >
             <Icon size={22} aria-hidden />
-            <span className="max-w-full truncate px-1">{label}</span>
+            <span className="whitespace-nowrap px-1 leading-6">{label}</span>
           </NavLink>
         ))}
       </nav>

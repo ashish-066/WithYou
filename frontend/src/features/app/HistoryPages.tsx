@@ -64,10 +64,10 @@ export function HistoryPage() {
                 <Link to={`/history/${s.session_id}`} className="flex items-center gap-3 px-4 py-3">
                   <ModeIcon mode={s.mode} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-lead text-ink">
+                    <span className="block truncate text-lead leading-7 text-ink">
                       {s.mode === 'talk' ? t.justTalk : s.topic || t.noTopic}
                     </span>
-                    <span className="block truncate text-meta text-muted">
+                    <span className="block truncate text-meta leading-6 text-muted">
                       {timeLabel(s.created_at, language)}
                       {s.mode === 'study' && s.level && ` · ${t.levels[s.level]}`}
                       {s.mood && ` · ${t.moodNames[s.mood.label]}`}
