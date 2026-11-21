@@ -87,3 +87,8 @@ Ashish heard nothing. What I found:
 - **Real-brain smoke test** (real graph + Gemini, no voice): a tired "hi" got an empathetic chat reply; "Teach me about photosynthesis" got a warm 3-sentence explanation with an analogy and an offer to go deeper or check; "quiz me" got one gentle question; a half answer got praise for the right part and a hint for the rest, with no grading. 2.5–4.4 s per full turn (the reply is published before scoring).
 - **[ASK ASHISH] pending:** voice test, "Teach me about photosynthesis".
 - **[ASK ASHISH] Phase 1 manual test: PASSED (2026-11-21).** It feels like a buddy; explain/quiz/goodbye work by voice. **Phase 1 exit checkpoint met.**
+
+## Scope change (Ashish, 2026-11-21): Malayalam **and Telugu**
+Ashish doesn't speak Malayalam and wants Telugu too (so he can judge quality himself).
+- Bulbul v3 TTS samples (`spikes/out/buddy_{te-IN,ml-IN}_{shubh,kavya}.wav`) are all HTTP 200, about 2.2 s (first call 9 s, cold).
+- Saaras v3 STT round trip on those samples gave **exact** transcripts in both languages, about 1.2 s each (te-IN, ml-IN).
