@@ -54,7 +54,11 @@ ENV HF_HOME=/home/app/.cache/huggingface
 USER app
 # Bake model files (VAD, turn detector, ...) into the image instead of
 # downloading them when the first interview starts
-RUN python -m livekit.agents download-files
+# The download tool can crash on exit after finishing (livekit rtc shutdown
+# panic); accept that only if the model files are really there
+RUN python -m livekit.agents download-files \
+    || (test -n "$(find / -xdev -path '*huggingface*' -name '*.onnx' 2>/dev/null | head -1)" \
+        && echo "download-files crashed on exit; model files present")
 EXPOSE 8081
 # 200 once connected to LiveKit (port: AGENT_HEALTH_PORT)
 HEALTHCHECK --interval=15s --timeout=3s --start-period=60s --retries=3 \
