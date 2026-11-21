@@ -56,3 +56,11 @@ Running log of the Presence View → Padippu Koottukaran reshape. Newest entries
   - the model returns a separate `reasoning_content` field, and `content` starts with `\n`, so strip it
   - reasoning adds latency, so try a low `reasoning_effort` for the fast path
 - **P-1 STT:** not run yet (needs a Malayalam clip from Ashish).
+
+## Phase 0 manual test, round 1: no greeting → three fixes
+Ashish heard nothing. What I found:
+1. **BeyondPresence is out of credits (HTTP 402).** `bey.AvatarSession.start()` raised, and that crashed the agent before the greeting. **Fix:** the avatar is now optional (`ENABLE_AVATAR`, default on). If it fails, the session carries on voice-only (Bey reroutes audio only after a successful start, so the fallback is safe).
+2. **Cartesia TTS is out of credits (HTTP 402:** 6 credits left, about 12 needed per sentence). The agent "speaks" but no audio frames come out. **Not fixed in code. Decision needed:** top up Cartesia, or move the TTS swap to Sarvam Bulbul forward. Deepgram STT checked OK (HTTP 200 on a sample clip).
+3. **Redis socket timeout bug:** redis-py 8 defaults to a 5 s socket timeout, equal to our 5 s `XREAD BLOCK`. Idle reads in the agent's reply listener timed out every cycle, then slept 1 s, which can add up to 1 s to replies. On the worker, entries Redis had already delivered could be dropped client-side and wait for the 30 s reclaim. **Fix:** `socket_timeout=30` on both pools. Verified with 12 s of idle reads and no errors.
+- **Also:** the agent now registers as `padippu-buddy` (`AGENT_DISPATCH_NAME`) and the API dispatches it explicitly to each room (`livekit_service.dispatch_agent`). Another agent on the same LiveKit project can no longer take our calls. Verified against LiveKit Cloud: dispatch → "received job" → "Starting interview agent".
+- Tests: avatar 47 passed (+1 dispatch test), worker 59 passed.

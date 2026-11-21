@@ -54,6 +54,7 @@ async def create_call(request: CreateCallRequest, user: User = Depends(require_u
 
     try:
         await livekit_service.create_room(room_name)
+        await livekit_service.dispatch_agent(room_name)
         token = livekit_service.generate_participant_token(
             room_name=room_name,
             participant_identity=f"candidate-{session_id}",

@@ -50,6 +50,17 @@ async def test_concurrent_end_requests_clean_up_once(client, monkeypatch):
     assert len(deleted) == 1  # only one request did the cleanup
 
 
+async def test_call_dispatches_our_named_agent(client, monkeypatch):
+    dispatched = []
+
+    async def dispatch_agent(room):
+        dispatched.append(room)
+
+    monkeypatch.setattr(livekit_service, "dispatch_agent", dispatch_agent)
+    _, call = await start_call(client)
+    assert dispatched == [call["room_name"]]
+
+
 async def test_no_recording_is_started(client):
     _, call = await start_call(client)
     row = await interview(call["session_id"])

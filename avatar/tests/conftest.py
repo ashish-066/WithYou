@@ -73,6 +73,7 @@ async def client(redis, db, monkeypatch):
         return None
 
     monkeypatch.setattr(livekit_service, "create_room", create_room)
+    monkeypatch.setattr(livekit_service, "dispatch_agent", noop)
     monkeypatch.setattr(livekit_service, "delete_room", noop)
     monkeypatch.setattr(
         livekit_service, "generate_participant_token", lambda **k: "lk-token"

@@ -73,6 +73,9 @@ class Settings(BaseSettings):
 
     # BeyondPresence Configuration
     bey_api_key: str = ""
+    # Video avatar on/off. If it's on but BeyondPresence fails (e.g. out of
+    # credits), the session carries on voice-only.
+    enable_avatar: bool = True
     bey_avatar_id: str = "b9be11b8-89fb-4227-8f86-4a881393cbdb"  # Default avatar
 
     # STT Configuration (Deepgram via LiveKit Inference)
@@ -85,6 +88,9 @@ class Settings(BaseSettings):
 
     # Agent Configuration
     agent_name: str = "Presence"
+    # The voice agent registers under this name and is dispatched explicitly to
+    # each call's room, so no other agent on the same LiveKit project takes it
+    agent_dispatch_name: str = "padippu-buddy"
     agent_instructions: str = """You are Presence, a professional AI interviewer conducting a job interview.
 You are warm, professional, and encouraging while maintaining high standards.
 Keep your responses concise (2-3 sentences) to maintain natural conversation flow.

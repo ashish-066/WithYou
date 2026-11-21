@@ -329,16 +329,19 @@ async def entrypoint(ctx: JobContext) -> None:
         ctx.room.on("participant_disconnected", on_participant_disconnected)
         ctx.room.on("participant_connected", on_participant_connected)
 
-        # Start the BeyondPresence avatar with predictable identity for frontend detection
-        avatar = bey.AvatarSession(
-            avatar_id=settings.bey_avatar_id,
-            avatar_participant_identity="bey-avatar",  # Must contain 'bey' or 'avatar' for frontend
-            avatar_participant_name=settings.agent_name,  # Display name (e.g., "Presence")
-        )
-
-        # Start avatar first
-        await avatar.start(session, room=ctx.room)
-        logger.info(f"Avatar started for session {session_id}")
+        # BeyondPresence video avatar (identity must contain 'bey'/'avatar' for the
+        # frontend). Optional: if it fails, the buddy still talks, voice-only.
+        if settings.enable_avatar and settings.bey_api_key:
+            try:
+                avatar = bey.AvatarSession(
+                    avatar_id=settings.bey_avatar_id,
+                    avatar_participant_identity="bey-avatar",
+                    avatar_participant_name=settings.agent_name,
+                )
+                await avatar.start(session, room=ctx.room)
+                logger.info(f"Avatar started for session {session_id}")
+            except Exception as e:
+                logger.warning(f"Avatar unavailable for {session_id}, continuing voice-only: {e}")
 
         # Start the agent session with room input. BVC (LiveKit Cloud) removes
         # background voices and noise before VAD/STT, so they don't trigger
@@ -441,6 +444,9 @@ if __name__ == "__main__":
     cli.run_app(
         agents.WorkerOptions(
             entrypoint_fnc=entrypoint,
+            # Explicit dispatch only (api/call_routes.py): other agents on the same
+            # LiveKit project can't take our calls, and ours won't take theirs
+            agent_name=settings.agent_dispatch_name,
             prewarm_fnc=prewarm,
             drain_timeout=settings.agent_drain_timeout_seconds,
             # dev keeps LiveKit's random port so local runs don't collide

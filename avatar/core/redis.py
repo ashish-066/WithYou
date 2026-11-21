@@ -25,6 +25,10 @@ def get_pool() -> ConnectionPool:
             settings.redis_url,
             max_connections=10,
             decode_responses=True,
+            # redis-py 8 defaults to a 5 s socket timeout, the same as our XREAD
+            # BLOCK, so idle blocking reads timed out client-side (and a reply could
+            # be dropped mid-read). Keep it well above the longest block.
+            socket_timeout=30,
         )
         logger.info(f"Created Redis connection pool for {settings.redis_url}")
     return _pool

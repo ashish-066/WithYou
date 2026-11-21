@@ -55,6 +55,13 @@ class LiveKitService:
             logger.error(f"Failed to create room {room_name}: {e}")
             raise
 
+    async def dispatch_agent(self, room_name: str) -> None:
+        """Send our voice agent (registered as settings.agent_dispatch_name) to the room."""
+        await self.api_client.agent_dispatch.create_dispatch(
+            api.CreateAgentDispatchRequest(agent_name=settings.agent_dispatch_name, room=room_name)
+        )
+        logger.info(f"Dispatched agent '{settings.agent_dispatch_name}' to {room_name}")
+
     async def delete_room(self, room_name: str) -> None:
         """Delete a LiveKit room.
 
