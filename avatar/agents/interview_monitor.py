@@ -1,13 +1,8 @@
-"""Clock-based rules for the live interview, applied by the voice agent.
+"""Clock-based rules for the live session, applied by the voice agent.
 
-Silence after a question, coding-round prompts, leaving the camera view and
-dropped connections. Pure logic with an injected clock, so it can be tested
-without LiveKit; agents/entrypoint.py feeds it events and carries out the
-actions it returns.
-
-Principle: nothing the candidate does buys unobserved time. The clock never
-stops; an absence costs the current question (the worker replaces it) and
-repeated or long absences end the interview. Conversation-level rules (time
+Silence after a question and dropped connections. Pure logic with an injected
+clock, so it can be tested without LiveKit; agents/entrypoint.py feeds it
+events and carries out the actions it returns. Conversation-level rules (time
 budget, wrap-up, goodbyes) are in the worker: worker/brain/interview_flow.py.
 """
 
@@ -24,17 +19,6 @@ class MonitorPolicy:
     max_unanswered_in_a_row: int = 3
     # Unanswered silence over the whole interview (4 questions x 30 s)
     max_total_silence_s: float = 120.0
-    # Coding round
-    talk_through_s: float = 120.0  # typing without a word
-    typing_recent_s: float = 30.0  # counts as "typing" if code changed this recently
-    stuck_s: float = 60.0  # no typing and no speech
-    min_prompt_gap_s: float = 180.0  # at most one interjection per 3 min
-    # Camera view
-    face_warn_s: float = 10.0
-    face_end_s: float = 60.0
-    max_absences: int = 3
-    # Camera checks stopped arriving while connected (camera off or blocked)
-    presence_stale_s: float = 20.0
     # Connection
     rejoin_window_s: float = 120.0
     max_rejoins: int = 1
@@ -48,15 +32,6 @@ POLICY = MonitorPolicy()
 
 LINES = {
     "repeat_offer": "Take your time. Would you like me to repeat the question?",
-    "talk_through": "Can you talk me through what you're writing?",
-    "stuck": "Where are you stuck? I can give you a hint if you'd like.",
-    "come_back": "I can't see you on camera. Please come back into view.",
-    "too_dark": "Your camera image is too dark for me to see you. Please turn on a light.",
-    "put_phone_away": "I can see a phone. Please put it away, out of reach, for the rest of the interview.",
-    "someone_with_you": (
-        "It looks like someone else is with you. The interview needs to be done alone, "
-        "so please make sure you're by yourself."
-    ),
 }
 
 
@@ -82,15 +57,14 @@ class Notify:
 class End:
     """End the interview; the worker writes the goodbye and the report."""
 
-    reason: str  # no_response | left_view | disconnected
+    reason: str  # no_response | disconnected
 
 
 Action = Say | Notify | End
 
 
 class InterviewMonitor:
-    def __init__(self, coding: bool, now: float, policy: MonitorPolicy = POLICY):
-        self.coding = coding
+    def __init__(self, now: float, policy: MonitorPolicy = POLICY):
         self.p = policy
         self.ended: str | None = None
         self.ended_at: float | None = None
@@ -106,19 +80,7 @@ class InterviewMonitor:
         self.unanswered_in_a_row = 0
         self.silence_total_s = 0.0
 
-        # Coding round
-        self.last_code_at: float | None = None
         self.last_speech_at = now
-        self.last_prompt_at: float | None = None
-        self.stuck_prompted_at: float | None = None
-
-        # Camera
-        self.face_absent_since: float | None = None
-        self.absence_counted = False
-        self.absences = 0
-        self.presence_seen_at: float | None = None
-        self._queued_return = False
-        self.dark = False
 
         # Connection
         self.left_at: float | None = None
@@ -149,7 +111,6 @@ class InterviewMonitor:
                 self._pending_latency_ms = int((now - self.question_end) * 1000)
             self.question_end = None
         self.unanswered_in_a_row = 0
-        self.stuck_prompted_at = None
 
     def prompt_failed(self) -> None:
         """A nudge couldn't be spoken: the next speech is not that nudge."""
@@ -159,19 +120,6 @@ class InterviewMonitor:
         """Thinking time before the turn just completed (sent with the turn)."""
         latency, self._pending_latency_ms = self._pending_latency_ms, None
         return latency
-
-    def code_activity(self, now: float) -> None:
-        self.last_code_at = now
-        self.stuck_prompted_at = None
-
-    def presence(self, now: float, face_visible: bool, dark: bool = False) -> None:
-        """A camera check (agents/vision_monitor.py, on the candidate's video)."""
-        self.presence_seen_at = now
-        self.dark = dark
-        if face_visible:
-            self._face_back(now)
-        elif self.face_absent_since is None:
-            self.face_absent_since = now
 
     def participant_left(self, now: float) -> list[Action]:
         if self.ended:
@@ -202,31 +150,10 @@ class InterviewMonitor:
                 return self._end("disconnected", now)
             return []
 
-        # Camera checks stopped arriving: treat as out of view
-        if (
-            self.presence_seen_at is not None
-            and self.face_absent_since is None
-            and now - self.presence_seen_at >= self.p.presence_stale_s
-        ):
-            self.face_absent_since = self.presence_seen_at
-
-        # Out of view
-        if self.face_absent_since is not None:
-            away = now - self.face_absent_since
-            if away >= self.p.face_end_s:
-                return self._end("left_view", now)
-            if away >= self.p.face_warn_s and not self.absence_counted:
-                self.absence_counted = True
-                self.absences += 1
-                if self.absences >= self.p.max_absences:
-                    return self._end("left_view", now)
-                return [self._say("too_dark" if self.dark else "come_back")]
-            return []
-
         if self.agent_speaking:
             return []
 
-        return self._coding_tick(now) if self.coding else self._silence_tick(now)
+        return self._silence_tick(now)
 
     def should_hang_up_anyway(self, now: float) -> bool:
         """The worker never confirmed the end: hang up without its goodbye."""
@@ -247,35 +174,6 @@ class InterviewMonitor:
             return [self._say("repeat_offer")]
         return []
 
-    def _coding_tick(self, now: float) -> list[Action]:
-        typing = self.last_code_at is not None and now - self.last_code_at < self.p.typing_recent_s
-        since_speech = now - self.last_speech_at
-        gap_ok = self.last_prompt_at is None or now - self.last_prompt_at >= self.p.min_prompt_gap_s
-
-        # Typing without explaining: ask them to think aloud
-        if typing and since_speech >= self.p.talk_through_s and gap_ok:
-            self.last_prompt_at = now
-            return [self._say("talk_through")]
-
-        if typing:
-            return []
-
-        # Neither typing nor talking
-        idle_since = max(self.last_speech_at, self.last_code_at or 0.0)
-        idle = now - idle_since
-        if self.stuck_prompted_at is None:
-            if idle >= self.p.stuck_s:
-                self.stuck_prompted_at = now
-                self.last_prompt_at = now
-                return [self._say("stuck")]
-            return []
-        # Still nothing a minute after "where are you stuck?"
-        if now - self.stuck_prompted_at >= self.p.stuck_s:
-            self.stuck_prompted_at = None
-            self.last_speech_at = now  # the worker's next question restarts the clock
-            return self._unanswered(self.p.stuck_s, now)
-        return []
-
     def _unanswered(self, waited: float, now: float) -> list[Action]:
         self.question_end = None
         self.unanswered_in_a_row += 1
@@ -286,23 +184,6 @@ class InterviewMonitor:
         ):
             return self._end("no_response", now)
         return [Notify("question_unanswered")]
-
-    def _face_back(self, now: float) -> None:
-        if self.face_absent_since is None:
-            return
-        counted = self.absence_counted
-        self.face_absent_since = None
-        self.absence_counted = False
-        if counted:
-            # Only an absence long enough to warn about costs the question
-            self._queued_return = True
-
-    def drain_returns(self, now: float) -> list[Action]:
-        """Actions owed for a return to view (called by the agent after presence())."""
-        if self._queued_return and not self.ended:
-            self._queued_return = False
-            return self._returned(now)
-        return []
 
     def _returned(self, now: float) -> list[Action]:
         self.question_end = None

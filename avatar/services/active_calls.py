@@ -2,7 +2,7 @@
 
     call:{call_id}               JSON record of a live call
     call_session:{session_id}    call_id of that session's live call
-    call_ended:{call_id}         session_id, briefly, so duplicate "end" requests succeed
+    call_ended:{call_id}         marker, briefly, so duplicate "end" requests succeed
 
 Records expire after CALL_TTL so abandoned calls don't linger.
 """
@@ -36,14 +36,16 @@ async def get_by_session(session_id: str) -> dict | None:
 async def claim_for_ending(call_id: str) -> dict | None:
     """Atomically take the call out of the live set. Only one caller gets it."""
     redis = get_redis_client()
-    raw = await redis.getdel(f"call:{call_id}")
+    # Take the call and mark it ended in one transaction, so a duplicate request
+    # never sees it neither live nor recently ended
+    pipe = redis.pipeline(transaction=True)
+    pipe.getdel(f"call:{call_id}")
+    pipe.set(f"call_ended:{call_id}", "1", ex=RECENTLY_ENDED_TTL_SECONDS)
+    raw, _ = await pipe.execute()
     if not raw:
         return None
     call = json.loads(raw)
-    pipe = redis.pipeline(transaction=True)
-    pipe.delete(f"call_session:{call['session_id']}")
-    pipe.set(f"call_ended:{call_id}", call["session_id"], ex=RECENTLY_ENDED_TTL_SECONDS)
-    await pipe.execute()
+    await redis.delete(f"call_session:{call['session_id']}")
     return call
 
 

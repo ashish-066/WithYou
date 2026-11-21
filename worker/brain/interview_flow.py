@@ -2,8 +2,8 @@
 confirming a goodbye, unanswered questions and returns after an absence.
 
 The rules here are conversation-level and run in the worker before each graph
-run. Clock-based rules that need no candidate turn (silence, leaving the
-camera view, a dropped connection) live in the voice agent
+run. Clock-based rules that need no candidate turn (silence, a dropped
+connection) live in the voice agent
 (avatar/agents/interview_monitor.py), which reports them as events.
 
 Principle: nothing the candidate does buys unobserved time. The clock never
@@ -32,7 +32,6 @@ class FlowPolicy:
     max_turns: int = 40
     # Don't wrap up on settled ratings before this
     min_minutes_round1: float = 15.0
-    min_minutes_coding: float = 20.0
     # Candidate's questions and goodbye
     closing_minutes: float = 3.0
     # A skill is settled with this much evidence and a stable rating
@@ -40,9 +39,6 @@ class FlowPolicy:
     settled_max_change: float = 0.5
     # Skills below this weight don't hold up the wrap-up
     must_have_weight: float = 0.1
-    # Thinking time that, with a long polished answer, looks like reading
-    suspicious_latency_ms: int = 20_000
-    suspicious_min_words: int = 60
 
 
 POLICY = FlowPolicy()
@@ -53,14 +49,13 @@ EndReason = Literal[
     "time_limit",  # hard stop
     "turn_limit",  # safety cap on turns
     "no_response",  # stopped answering (from the voice agent)
-    "left_view",  # out of camera view too long or too often (from the voice agent)
     "disconnected",  # connection lost and not back in time (from the voice agent)
     "abandoned",  # no activity at all; closed by the worker's sweep
     "user_ended",  # End button
 ]
 
 # Interviews that ended before a proper assessment could be made
-INCOMPLETE_REASONS = {"no_response", "left_view", "disconnected", "abandoned"}
+INCOMPLETE_REASONS = {"no_response", "disconnected", "abandoned"}
 
 # =============================================================================
 # Instructions for the interviewer (sent outside <candidate_input>)
@@ -91,22 +86,11 @@ INSTRUCTIONS = {
         "Say briefly that you'll move on, and ask a different question on a different "
         "topic or skill."
     ),
-    "move_on_coding": (
-        "The candidate did not answer your last question. Do not repeat it. Say briefly "
-        "that you'll move on, then ask a different, short question about their current "
-        "approach or code."
-    ),
     "replace_question": (
-        "The candidate was away (out of camera view or disconnected) and has just come "
+        "The candidate was disconnected and has just come "
         "back. Do not return to the previous question: it is no longer valid. Say in one "
         "sentence that you'll continue with a different question, then ask a new question "
         "on a different topic or skill."
-    ),
-    "replace_question_coding": (
-        "The candidate was away (out of camera view or disconnected) and has just come "
-        "back. Do not return to your previous question. Say in one sentence that you'll "
-        "continue, then ask them to explain, out loud, a specific part of their current "
-        "code or approach that you have not discussed yet."
     ),
 }
 
@@ -129,10 +113,6 @@ CLOSING_MESSAGES = {
     ),
     "no_response": (
         "It seems we've lost you, so we'll stop here. Thank you, and goodbye."
-    ),
-    "left_view": (
-        "As you've been out of view for too long, we have to end the interview here. "
-        "Thank you, and goodbye."
     ),
     "disconnected": "The interview has ended. Thank you.",
     "abandoned": "The interview has ended. Thank you.",
@@ -257,18 +237,7 @@ def record_levels(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def skills_settled(state: dict[str, Any], policy: FlowPolicy = POLICY) -> bool:
-    """Every must-have skill has enough evidence and a stable rating.
-
-    Coding round: a passing solution and a stated complexity.
-    """
-    if state.get("interview_mode") == "round2_dsa":
-        dsa = state.get("dsa_state") or {}
-        last = dsa.get("last_execution_result") or {}
-        return bool(
-            last.get("tests_total")
-            and last.get("pass_rate") == 1.0
-            and dsa.get("candidate_complexity_claim")
-        )
+    """Every must-have skill has enough evidence and a stable rating."""
 
     tree = state.get("skill_tree") or {}
     weights: dict[str, float] = tree.get("skill_weights") or {}
@@ -308,7 +277,6 @@ def before_candidate_turn(
     flow["unanswered_in_a_row"] = 0  # they answered something
     elapsed = elapsed_minutes(state, now)
     turn = int(state.get("turn_count") or 0) + 1
-    coding = state.get("interview_mode") == "round2_dsa"
 
     def conclude(reason: str) -> Decision:
         return Decision("conclude", "", reason, flow)
@@ -341,7 +309,7 @@ def before_candidate_turn(
         return Decision("continue", INSTRUCTIONS["confirm_end"], None, flow)
 
     # Time to wrap up?
-    min_minutes = policy.min_minutes_coding if coding else policy.min_minutes_round1
+    min_minutes = policy.min_minutes_round1
     if elapsed >= policy.budget_minutes * policy.wrap_up_fraction:
         flow["wrap_up_reason"] = "time"
     elif elapsed >= min_minutes and skills_settled(state, policy):
@@ -362,52 +330,14 @@ def on_unanswered(state: dict[str, Any]) -> Decision:
     flow = _flow(state)
     flow["unanswered_total"] += 1
     flow["unanswered_in_a_row"] += 1
-    coding = state.get("interview_mode") == "round2_dsa"
-    return Decision("continue", INSTRUCTIONS["move_on_coding" if coding else "move_on"], None, flow)
+    return Decision("continue", INSTRUCTIONS["move_on"], None, flow)
 
 
 def on_returned(state: dict[str, Any]) -> Decision:
     """Back after an absence: the current question is no longer valid."""
     flow = _flow(state)
     flow["absences"] += 1
-    coding = state.get("interview_mode") == "round2_dsa"
-    key = "replace_question_coding" if coding else "replace_question"
-    return Decision("continue", INSTRUCTIONS[key], None, flow)
-
-
-def record_timing(
-    state: dict[str, Any],
-    latency_ms: int | None,
-    text: str,
-    turn: int,
-    now: datetime,
-    policy: FlowPolicy = POLICY,
-) -> tuple[dict[str, Any], dict[str, Any] | None]:
-    """Remember how long the candidate took to start answering.
-
-    Returns the flow and, for a long silence followed by a long answer (the
-    pattern of reading an answer from somewhere), an integrity flag.
-    """
-    flow = _flow(state)
-    if latency_ms is None or latency_ms < 0:
-        return flow, None
-    words = len(text.split())
-    flow["response_timings"] = [
-        *flow["response_timings"],
-        {"turn": turn, "latency_ms": int(latency_ms), "words": words},
-    ][-200:]
-    if latency_ms >= policy.suspicious_latency_ms and words >= policy.suspicious_min_words:
-        seconds = round(latency_ms / 1000)
-        return flow, {
-            "flag_id": f"timing-{turn}",
-            "flag_type": "suspicious_timing",
-            "severity": "medium",
-            "confidence": 0.5,
-            "description": f"Started answering after {seconds} s of silence, then gave a {words}-word answer",
-            "timestamp": now.isoformat(),
-            "turn_number": turn,
-        }
-    return flow, None
+    return Decision("continue", INSTRUCTIONS["replace_question"], None, flow)
 
 
 def completion_summary(state: dict[str, Any], now: datetime | None = None) -> dict[str, Any]:

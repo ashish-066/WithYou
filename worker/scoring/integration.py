@@ -8,7 +8,7 @@ It handles:
 2. Processing Q&A exchanges to extract evidence
 3. Updating skill levels based on extracted evidence
 4. Generating next question suggestions
-5. Calculating final scores and Elo rankings
+5. Calculating final scores
 """
 
 import logging
@@ -17,7 +17,6 @@ from typing import Any
 from redis.asyncio import Redis
 
 from brain.state import InterviewState, SkillTreeState
-from scoring.elo_system import EloSystem
 from scoring.evidence_extractor import EvidenceExtractor
 from scoring.jd_parser import JDParser
 from scoring.ladder_generator import SkillLadderGenerator
@@ -55,7 +54,6 @@ class ScoringIntegration:
         self.tree_manager = SkillTreeManager(redis)
         self.question_selector = QuestionSelector()
         self.score_calculator = ScoreCalculator()
-        self.elo_system = EloSystem(redis, self.score_calculator)
 
     # =========================================================================
     # Initialization
@@ -322,21 +320,6 @@ class ScoringIntegration:
         updated_skill_tree = dict(skill_tree_state)
         updated_skill_tree["weighted_score"] = score.total_weighted_score
         updated_skill_tree["score_percentage"] = score.percentage
-
-        # Check for Elo rating
-        role_id = skill_tree_state.get("role_id", "")
-        if await self.elo_system.can_show_rankings(role_id):
-            rating = await self.elo_system.get_rating(tree.candidate_id, role_id)
-            rankings = await self.elo_system.get_role_rankings(role_id)
-
-            if rankings:
-                all_ratings = [r.rating for r in rankings]
-                from scoring.elo_system import calculate_percentile
-
-                percentile = calculate_percentile(rating.rating, all_ratings)
-
-                updated_skill_tree["elo_rating"] = rating.rating
-                updated_skill_tree["elo_percentile"] = percentile
 
         logger.info(
             f"[SCORING] Final score for session {session_id}: "

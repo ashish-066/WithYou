@@ -1,13 +1,13 @@
 /**
- * Recruiter sign-in (and organization sign-up when the server allows it).
- * After sign-in: back to the page that sent them here, or their area's home.
+ * Learner sign-in (and sign-up when the server allows it).
+ * After sign-in: back to the page that sent them here, or /study.
  */
 
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { login, signup } from '../services/authApi';
-import { useAuthConfig } from '../areas/shared/data';
+import { getAuthConfig, login, signup } from '../services/authApi';
+import { useQuery } from '@tanstack/react-query';
 import { homeFor } from '../areas/shared/routing';
 import { Button, Field, Input, Mark } from '../ui';
 import type { AuthUser } from '../types';
@@ -23,10 +23,9 @@ export function LoginPage() {
   const [params] = useSearchParams();
   const next = safeNext(params.get('next'));
   const expired = params.get('expired') === '1';
-  const config = useAuthConfig();
+  const config = useQuery({ queryKey: ['auth-config'], queryFn: getAuthConfig, staleTime: 5 * 60_000 });
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [orgName, setOrgName] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,7 +46,7 @@ export function LoginPage() {
       if (mode === 'login') {
         await login(email, password);
       } else {
-        await signup({ org_name: orgName, name, email, password });
+        await signup({ name, email, password });
       }
       const me = await refresh();
       if (me) navigate(destination(me), { replace: true });
@@ -71,11 +70,11 @@ export function LoginPage() {
 
       <main className="flex flex-1 items-start justify-center px-6 pb-16 pt-[8vh] sm:px-10">
         <div className="w-full max-w-[380px]">
-          <h1 className="font-display text-h2 text-ink">{mode === 'login' ? 'Sign in' : 'Create your organization'}</h1>
+          <h1 className="font-display text-h2 text-ink">{mode === 'login' ? 'Sign in' : 'Create your account'}</h1>
           <p className="mt-2 text-lead text-muted">
             {mode === 'login'
-              ? 'For recruiters and hiring teams. Candidates join through the link they were sent.'
-              : 'You’ll be its first admin and can add your team afterwards.'}
+              ? 'Sign in to study with your buddy.'
+              : 'One account, your own study sessions.'}
           </p>
 
           {expired && mode === 'login' && (
@@ -87,17 +86,6 @@ export function LoginPage() {
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             {mode === 'signup' && (
               <>
-                <Field label="Organization name">
-                  {(p) => (
-                    <Input
-                      id={p.id}
-                      value={orgName}
-                      onChange={(e) => setOrgName(e.target.value)}
-                      required
-                      autoComplete="organization"
-                    />
-                  )}
-                </Field>
                 <Field label="Your name">
                   {(p) => (
                     <Input

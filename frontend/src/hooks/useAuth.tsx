@@ -1,5 +1,5 @@
 /**
- * Signed-in recruiter state for the dashboard.
+ * Signed-in learner state.
  */
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';

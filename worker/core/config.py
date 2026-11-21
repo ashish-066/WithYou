@@ -47,20 +47,6 @@ class Settings(BaseSettings):
     reclaim_min_idle_ms: int = 30000  # Pending this long = owner crashed or failed
     max_delivery_attempts: int = 3  # Drop (ACK) a message after this many failures
 
-    # DSA Code Sandbox Configuration
-    # "docker": each test runs in a throwaway locked-down container (required in
-    # production). "subprocess": plain local process, NOT isolated — dev only.
-    sandbox_mode: str = "subprocess"
-    # Production requires a digest pin (name@sha256:...) so a re-pushed tag
-    # can't change what candidate code runs on
-    sandbox_image: str = "python:3.12-slim"
-    sandbox_runtime: str = ""  # e.g. "runsc" for gVisor; empty = Docker default
-    sandbox_memory_mb: int = 256
-    sandbox_cpus: float = 1.0
-    sandbox_pids_limit: int = 64
-    sandbox_max_concurrency: int = 8  # containers running at once per worker
-    sandbox_startup_grace_seconds: float = 10.0  # container start allowance
-
     # Distributed Lock Configuration
     lock_ttl_ms: int = 5000  # Lock timeout in milliseconds (renewed while held)
     lock_retry_delay_ms: int = 100  # Delay between lock acquisition retries
@@ -87,6 +73,8 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("GOOGLE_API_KEY", "GEMINI_API_KEY"),
     )  # For Gemini models - accepts either GOOGLE_API_KEY or GEMINI_API_KEY
     gemini_model: str = "gemini-3.8-flash"
+    # Sarvam (Malayalam STT/TTS and the sarvam-105b brain); https://dashboard.sarvam.ai
+    sarvam_api_key: str = ""
     # Scoring pipeline (JD parse, ladders, question selection, evidence): fail fast
     # instead of holding the worker while Gemini is slow. Each step has a fallback.
     scoring_llm_timeout_seconds: float = 20.0  # per Gemini request
@@ -108,10 +96,6 @@ class Settings(BaseSettings):
     # Redis Stream Initialization Retries
     redis_init_retries: int = 5
     redis_init_delay_seconds: int = 2
-
-    # Hume.AI Configuration
-    hume_api_key: str = ""
-    hume_callback_url: str | None = None
 
     @model_validator(mode="after")
     def _default_consumer_name(self) -> "Settings":
@@ -135,13 +119,6 @@ class Settings(BaseSettings):
                 "REDIS_URL must include a password in production "
                 "(redis://:<password>@host or rediss:// for TLS)"
             )
-        if self.sandbox_mode not in ("docker", "subprocess"):
-            raise ValueError(f"SANDBOX_MODE must be 'docker' or 'subprocess', got {self.sandbox_mode!r}")
-        if self.environment == "production" and self.sandbox_mode != "docker":
-            # Candidate code must never run unisolated on a production host
-            raise ValueError("SANDBOX_MODE=docker is required in production")
-        if self.environment == "production" and "@sha256:" not in self.sandbox_image:
-            raise ValueError("SANDBOX_IMAGE must be pinned by digest in production (image@sha256:...)")
         return self
 
     @property

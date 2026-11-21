@@ -178,69 +178,6 @@ class LiveKitService:
             await self._api.aclose()
             self._api = None
 
-    async def start_recording(self, room_name: str, session_id: str) -> str:
-        """Start recording a room.
-
-        Args:
-            room_name: Name of the room to record
-            session_id: Session ID (used for file naming)
-
-        Returns:
-            Egress ID
-        """
-        try:
-            # Configure S3 output
-            # For AWS S3, endpoint should be empty to let SDK handle it
-            endpoint = settings.s3_endpoint if settings.s3_endpoint else ""
-
-            s3_output = api.EncodedFileOutput(
-                filepath=f"recordings/{session_id}/{room_name}.mp4",
-                s3=api.S3Upload(
-                    access_key=settings.s3_access_key,
-                    secret=settings.s3_secret_key,
-                    region=settings.s3_region,
-                    bucket=settings.s3_bucket,
-                    endpoint=endpoint,
-                ),
-            )
-
-            # Start room composite egress (records video + audio of all participants)
-            info = await self.api_client.egress.start_room_composite_egress(
-                api.RoomCompositeEgressRequest(
-                    room_name=room_name,
-                    layout="grid",
-                    file=s3_output,
-                    audio_only=False,
-                )
-            )
-
-            logger.info(
-                f"Started recording for room {room_name}, egress ID: {info.egress_id}"
-            )
-            return info.egress_id
-        except Exception as e:
-            logger.error(f"Failed to start recording for room {room_name}: {e}")
-            # We don't raise here to allow the call to proceed even if recording fails
-            # But in a strict requirement scenario, we might want to raise
-            return ""
-
-    async def stop_recording(self, egress_id: str) -> None:
-        """Stop an active recording.
-
-        Args:
-            egress_id: ID of the egress to stop
-        """
-        if not egress_id:
-            return
-
-        try:
-            await self.api_client.egress.stop_egress(
-                api.StopEgressRequest(egress_id=egress_id)
-            )
-            logger.info(f"Stopped recording egress {egress_id}")
-        except Exception as e:
-            logger.warning(f"Failed to stop recording egress {egress_id}: {e}")
-
 
 # Global service instance
 livekit_service = LiveKitService()

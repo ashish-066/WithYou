@@ -205,118 +205,12 @@ async def scoring_process_node(state: InterviewState) -> dict[str, Any]:
 
 
 async def scoring_finalize_and_compare_node(state: InterviewState) -> dict[str, Any]:
-    """Finalize scoring and run ELO comparison at interview end.
-
-    This node:
-    1. Calculates final weighted scores
-    2. Compares against existing candidate pool
-    3. Updates ELO ratings
-    """
+    """Finalize the skill-tree scores at the end of the session."""
     skill_tree_state = state.get("skill_tree")
     if not skill_tree_state or not skill_tree_state.get("tree_initialized"):
         return {}
-
     try:
-        # Calculate final score and update ELO
-        result = await scoring_finalize_node(state)
-
-        # Store weighted score for future comparisons
-        if result.get("skill_tree"):
-            from core.redis import get_redis_client
-
-            session_id = state.get("session_id", "")
-            candidate_id = state.get("candidate_id") or session_id
-            role_id = skill_tree_state.get("role_id", "")
-
-            try:
-                redis = await get_redis_client()
-                from scoring.elo_system import EloSystem
-                from scoring.models import RoleRequirements, SkillRequirement
-                from scoring.score_calculator import ScoreCalculator
-                from scoring.tree_manager import SkillTreeManager
-
-                # Get the skill tree
-                tree_manager = SkillTreeManager(redis)
-                tree = await tree_manager.get_tree(session_id)
-
-                if tree:
-                    # Build requirements
-                    skill_weights = skill_tree_state.get("skill_weights", {})
-                    requirements = RoleRequirements(
-                        title=skill_tree_state.get("role_title", ""),
-                        skills=[
-                            SkillRequirement(skill_name=name, weight=weight)
-                            for name, weight in skill_weights.items()
-                        ],
-                    )
-
-                    # Calculate score
-                    score_calculator = ScoreCalculator()
-                    weighted_score = score_calculator.calculate_score(tree, requirements)
-
-                    # Store weighted score for comparisons
-
-                    score_key = f"weighted_score:{role_id}:{candidate_id}"
-                    await redis.set(score_key, weighted_score.model_dump_json())
-
-                    # Initialize ELO system and compare against pool
-                    elo_system = EloSystem(redis, score_calculator)
-
-                    # Get existing candidates
-                    role_candidates_key = f"role_candidates:{role_id}"
-                    existing_ids = await redis.smembers(role_candidates_key)
-
-                    if existing_ids:
-                        # Compare against existing candidates
-                        for existing_id in existing_ids:
-                            if isinstance(existing_id, bytes):
-                                existing_id = existing_id.decode()
-                            if existing_id == candidate_id:
-                                continue
-
-                            # Get existing candidate's score
-                            existing_score_key = f"weighted_score:{role_id}:{existing_id}"
-                            existing_score_data = await redis.get(existing_score_key)
-
-                            if existing_score_data:
-                                from scoring.models import WeightedScore
-
-                                if isinstance(existing_score_data, bytes):
-                                    existing_score_data = existing_score_data.decode()
-                                existing_score = WeightedScore.model_validate_json(
-                                    existing_score_data
-                                )
-
-                                # Record match
-                                await elo_system.record_match(
-                                    weighted_score, existing_score, requirements
-                                )
-
-                    # Save new candidate's rating
-                    rating = await elo_system.get_rating(candidate_id, role_id)
-                    await elo_system.save_rating(rating)
-
-                    # Update skill tree state with ELO data
-                    updated_skill_tree = dict(result.get("skill_tree", skill_tree_state))
-                    updated_skill_tree["elo_rating"] = rating.rating
-
-                    # Calculate percentile
-                    rankings = await elo_system.get_role_rankings(role_id)
-                    if rankings:
-                        all_ratings = [r.rating for r in rankings]
-                        from scoring.elo_system import calculate_percentile
-
-                        updated_skill_tree["elo_percentile"] = calculate_percentile(
-                            rating.rating, all_ratings
-                        )
-
-                    result["skill_tree"] = updated_skill_tree
-
-                await redis.aclose()
-            except Exception as e:
-                logger.error(f"[SCORING] Error in ELO comparison: {e}")
-
-        return result
+        return await scoring_finalize_node(state)
     except Exception as e:
         logger.error(f"[SCORING] Error in scoring finalize node: {e}")
         return {}
@@ -339,12 +233,6 @@ def brain_route_decision(state: InterviewState) -> Literal["fast", "slow", "end"
     if router.should_end_interview(state):
         logger.info("Routing to END: interview end conditions met")
         return "end"
-
-    # DSA Round 2: every candidate turn is handled by the fast brain's DSA tool.
-    # (Profile/report classifiers misfire on technical talk.)
-    if state.get("interview_mode") == "round2_dsa":
-        logger.info("Routing to FAST brain: DSA round")
-        return "fast"
 
     # Check for pending slow tasks
     if router.has_pending_slow_tasks(state):

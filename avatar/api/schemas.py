@@ -1,79 +1,17 @@
 """Pydantic models for API request/response schemas."""
 
-from typing import Literal
-
 from pydantic import BaseModel, Field
 
 
 class CreateCallRequest(BaseModel):
-    """Request to create a new video interview call.
+    """Request to start a study session (signed-in learner only)."""
 
-    Candidates start with `invite_token` (role, round and problem come from the
-    invite and override anything sent here). Signed-in recruiters may start a
-    call without an invite, e.g. to try an interview themselves.
-    """
-
-    invite_token: str | None = Field(
-        default=None,
-        max_length=2048,
-        description="Signed invite link token for candidates",
-    )
     candidate_name: str = Field(
-        default="Candidate",
+        default="Learner",
         min_length=1,
         max_length=120,
-        description="Display name for the candidate in the call",
+        description="Display name for the learner in the call",
     )
-    role_id: str | None = Field(
-        default=None,
-        max_length=120,
-        description="Job role ID to fetch job description and title from admin roles",
-    )
-    linkedin_url: str | None = Field(
-        default=None,
-        max_length=500,
-        description="LinkedIn profile URL for the candidate",
-    )
-    github_url: str | None = Field(
-        default=None,
-        max_length=500,
-        description="GitHub profile URL for the candidate",
-    )
-    resume_text: str | None = Field(
-        default=None,
-        max_length=100_000,
-        description="Extracted text from the candidate's resume",
-    )
-    # --- Round selection ---
-    interview_mode: Literal["round1", "round2_dsa"] = Field(
-        default="round1",
-        description="Interview mode: 'round1' (technical screen) or 'round2_dsa' (coding round)",
-    )
-    dsa_problem_id: str | None = Field(
-        default=None,
-        max_length=120,
-        description="DSA problem ID for Round 2 interviews. Required when interview_mode='round2_dsa'.",
-    )
-
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "candidate_name": "John Doe",
-                    "role_id": "senior-swe-backend",
-                    "linkedin_url": "https://linkedin.com/in/johndoe",
-                    "github_url": "https://github.com/johndoe",
-                    "resume_text": "John Doe - Software Engineer...",
-                    "interview_mode": "round1",
-                },
-                {
-                    "candidate_name": "Jane Smith",
-                    "interview_mode": "round2_dsa",
-                    "dsa_problem_id": "two_sum_001",
-                },
-            ]
-        }
-    }
 
 
 class CallResponse(BaseModel):

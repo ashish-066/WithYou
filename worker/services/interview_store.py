@@ -41,7 +41,6 @@ def outcome_from_state(
             {
                 "running_scores": state.get("running_scores"),
                 "trust_score": state.get("trust_score"),
-                "integrity_score": state.get("integrity_score"),
                 "turn_count": state.get("turn_count"),
                 "verified_claims": state.get("verified_claims"),
                 # How the interview went: end reason, length, unanswered, absences
@@ -49,16 +48,10 @@ def outcome_from_state(
             }
         ),
         "skill_tree": _jsonable(state.get("skill_tree")),
-        "dsa_state": _jsonable(state.get("dsa_state")),
         "integrity": _jsonable(
             {
-                "cheat_flags": state.get("cheat_flags"),
-                "integrity_report": state.get("integrity_report"),
+                # (Postgres column kept from the interview platform; no integrity data any more)
                 "timestamp_notes": state.get("timestamp_notes"),
-                # Time from the end of each question to the candidate's first word
-                "response_timings": (state.get("flow") or {}).get("response_timings") or [],
-                # Follow-ups asked to test answers that looked looked-up (brain/verification_probe.py)
-                "verification_probes": (state.get("flow") or {}).get("verification_probes") or [],
             }
         ),
         "transcript": _jsonable(
@@ -115,7 +108,6 @@ async def state_from_saved(session_id: str) -> dict[str, Any] | None:
     return {
         "session_id": session_id,
         "candidate_id": session_id,
-        "interview_mode": row.interview_mode or "round1",
         "interview_ended": True,
         "end_reason": row.end_reason or "completed",
         "started_at": row.created_at.isoformat() if row.created_at else None,
@@ -123,18 +115,11 @@ async def state_from_saved(session_id: str) -> dict[str, Any] | None:
         "message_summary": transcript.get("summary"),
         "running_scores": scores.get("running_scores") or {},
         "trust_score": scores.get("trust_score") or 1.0,
-        "integrity_score": scores.get("integrity_score") or 1.0,
         "turn_count": scores.get("turn_count") or 0,
         "verified_claims": scores.get("verified_claims") or [],
         "skill_tree": row.skill_tree,
-        "dsa_state": row.dsa_state,
         "analytics_data": row.analytics,
-        "cheat_flags": integrity.get("cheat_flags") or [],
-        "integrity_report": integrity.get("integrity_report"),
         "timestamp_notes": integrity.get("timestamp_notes") or [],
-        "flow": {
-            "response_timings": integrity.get("response_timings") or [],
-            "verification_probes": integrity.get("verification_probes") or [],
-        },
+        "flow": {},
         "topics_covered": [],
     }

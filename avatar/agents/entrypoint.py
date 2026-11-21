@@ -9,13 +9,10 @@ This module sets up the LiveKit agent that:
 """
 
 import asyncio
-import hashlib
 import json
 import logging
 import os
 import time
-import uuid
-from datetime import UTC, datetime
 
 # Load environment and set API keys BEFORE importing plugins
 from dotenv import load_dotenv
@@ -47,21 +44,11 @@ from livekit.agents.worker import ServerEnvOption
 from livekit.plugins import bey, cartesia, deepgram, noise_cancellation, silero
 
 from agents.interview_monitor import End, InterviewMonitor, Notify, Say
-from agents.vision import get_models
-from agents.vision_monitor import CANDIDATE_NOTICES, VisionMonitor
-from api.proctoring_routes import _queue_flags as queue_flags
-from api.proctoring_routes import _timeline_note as timeline_note
-from core.recordings import evidence_key, put_evidence
 from core.redis import get_redis_client
-from services import active_calls
 from services.call_finisher import finish_session
-from services.presence import code_activity_key, to_epoch
 from services.streams import AvatarStreamManager
 
 logger = logging.getLogger(__name__)
-
-# Data channel topic for notices to the candidate's page (frontend: CameraWarning)
-PROCTORING_TOPIC = "proctoring"
 
 # How LiveKit decides the candidate finished a turn and when Presence may be cut off.
 # The default turn detector (LiveKit Cloud inference) judges from the words whether
@@ -252,10 +239,8 @@ async def entrypoint(ctx: JobContext) -> None:
         session_id, since_ms=room_created_ms or None
     )
 
-    # Clock rules: silence, camera view, dropped connection (agents/interview_monitor.py)
-    call = await active_calls.get_by_session(session_id)
-    coding = (call or {}).get("interview_mode") == "round2_dsa"
-    monitor = InterviewMonitor(coding=coding, now=time.time())
+    # Clock rules: silence, dropped connection (agents/interview_monitor.py)
+    monitor = InterviewMonitor(now=time.time())
 
     # Completed turns (as decided by LiveKit's turn detector) go to the Brain Worker
     relay = TurnRelay(session_id=session_id, stream_manager=stream_manager, monitor=monitor)
@@ -264,7 +249,6 @@ async def entrypoint(ctx: JobContext) -> None:
     # Event to signal when to stop the response listener
     stop_event = asyncio.Event()
     listener_task: asyncio.Task | None = None
-    camera_task: asyncio.Task | None = None
 
     try:
         # Create agent session with STT, TTS, VAD (NO LLM - Brain Worker handles this)
@@ -345,115 +329,6 @@ async def entrypoint(ctx: JobContext) -> None:
         ctx.room.on("participant_disconnected", on_participant_disconnected)
         ctx.room.on("participant_connected", on_participant_connected)
 
-        # Camera checks on the candidate's video, on this server (agents/vision.py):
-        # presence for the clock rules, and flags with photo evidence
-        vision = VisionMonitor()
-        camera_task: asyncio.Task | None = None
-        call_started = to_epoch((call or {}).get("created_at")) or time.time()
-
-        async def report_finding(finding, rgb) -> None:
-            flag_id = str(uuid.uuid4())
-            evidence: dict = {
-                "detections": [d.as_dict() for d in finding.detections],
-                "model": "efficientdet_lite0 + blaze_face_short_range",
-                # Where to look in the recording (it starts with the call)
-                "recording_seconds": round(time.time() - call_started, 1),
-            }
-            if finding.with_photo and rgb is not None:
-                jpeg = _encode_jpeg(rgb)
-                key = evidence_key(session_id, flag_id)
-                if await asyncio.to_thread(put_evidence, key, jpeg):
-                    evidence.update(
-                        photo_key=key,
-                        sha256=hashlib.sha256(jpeg).hexdigest(),
-                        frame_size=[int(rgb.shape[1]), int(rgb.shape[0])],
-                    )
-            started_at, turn = await redis.hmget(f"context:{session_id}", "started_at", "turn_count")
-            flag = {
-                "id": flag_id,
-                "flag_type": finding.flag_type,
-                "severity": finding.severity,
-                "confidence": round(finding.confidence, 3),
-                "description": f"{finding.description} ({finding.confidence:.0%} confidence)",
-                "evidence": evidence,
-                "timestamp": datetime.now(UTC).isoformat(),
-                "turn_number": int(turn or 0),
-                "source": "server_camera_check",
-            }
-            await queue_flags(session_id, [flag], [timeline_note(flag, started_at)])
-            logger.info(f"[VISION] {session_id}: {finding.kind} flagged ({finding.confidence:.2f})")
-
-        async def show_notice(kind: str) -> None:
-            """Pop-up for the candidate (their page listens on the proctoring topic)."""
-            title, message = CANDIDATE_NOTICES.get(kind, ("", ""))
-            if not title:
-                return
-            try:
-                await ctx.room.local_participant.publish_data(
-                    json.dumps({"type": "camera_warning", "kind": kind, "title": title, "message": message}),
-                    reliable=True,
-                    destination_identities=[candidate_identity],
-                    topic=PROCTORING_TOPIC,
-                )
-            except Exception as e:
-                logger.warning(f"[VISION] {session_id}: could not show the candidate a notice: {e}")
-
-        async def watch_camera(track: rtc.Track) -> None:
-            stream = rtc.VideoStream(track, capacity=1, format=rtc.VideoBufferType.RGB24)
-            models = ctx.proc.userdata.get("vision") or get_models()
-            recent: dict[int, object] = {}
-            index = 0
-            spoken: set[str] = set()
-            try:
-                async for event in stream:
-                    now = time.time()
-                    if not vision.wants_frame(now):
-                        continue
-                    frame = event.frame
-                    rgb = _frame_to_rgb(frame)
-                    objects = vision.wants_objects(now)
-                    result = await asyncio.to_thread(models.analyze, rgb, objects)
-                    index += 1
-                    if objects:
-                        recent[index] = rgb
-                        for old in [k for k in recent if k < index - 4]:
-                            del recent[old]
-                    visible, findings = vision.observe(now, result, objects, index)
-                    monitor.presence(now, visible, dark=vision.dark)
-                    await run_actions(monitor.drain_returns(now))
-                    for finding in findings:
-                        # Pop-up on the candidate's screen every time; spoken the first time
-                        await show_notice(finding.kind)
-                        line = {"multiple_people": "someone_with_you", "phone": "put_phone_away"}.get(finding.kind)
-                        if line and line not in spoken:
-                            spoken.add(line)
-                            await run_actions([Say(line)])
-                        await report_finding(finding, recent.get(finding.frame_index))
-            except asyncio.CancelledError:
-                raise
-            except Exception as e:
-                logger.error(f"[VISION] {session_id}: camera checks stopped: {e}", exc_info=True)
-            finally:
-                await stream.aclose()
-
-        def start_camera(track: rtc.Track, publication, participant) -> None:
-            nonlocal camera_task
-            if (
-                participant.identity == candidate_identity
-                and track.kind == rtc.TrackKind.KIND_VIDEO
-                and publication.source == rtc.TrackSource.SOURCE_CAMERA
-            ):
-                if camera_task is not None:
-                    camera_task.cancel()
-                logger.info(f"[VISION] {session_id}: watching the candidate's camera")
-                camera_task = asyncio.create_task(watch_camera(track))
-
-        ctx.room.on("track_subscribed", start_camera)
-        for participant in ctx.room.remote_participants.values():
-            for publication in participant.track_publications.values():
-                if publication.track is not None:
-                    start_camera(publication.track, publication, participant)
-
         # Start the BeyondPresence avatar with predictable identity for frontend detection
         avatar = bey.AvatarSession(
             avatar_id=settings.bey_avatar_id,
@@ -499,16 +374,10 @@ async def entrypoint(ctx: JobContext) -> None:
         await session.say(greeting, allow_interruptions=True)
         logger.info(f"Initial greeting complete for session {session_id}")
 
-        # Once a second: read coding activity, apply the clock rules, and hang
-        # up when the interview is over (camera checks run in watch_camera)
-        last_code_at: float | None = None
+        # Once a second: apply the clock rules, and hang up when the session is over
         while ctx.room.connection_state == rtc.ConnectionState.CONN_CONNECTED:
             now = time.time()
             try:
-                code_at = to_epoch(await redis.get(code_activity_key(session_id)))
-                if code_at is not None and code_at != last_code_at:
-                    last_code_at = code_at
-                    monitor.code_activity(code_at)
                 await run_actions(monitor.tick(now))
             except Exception as e:
                 logger.warning(f"[MONITOR] {session_id}: tick failed: {e}")
@@ -529,9 +398,6 @@ async def entrypoint(ctx: JobContext) -> None:
     finally:
         # Signal listener to stop
         stop_event.set()
-
-        if camera_task is not None:
-            camera_task.cancel()
 
         # Cancel listener task
         if listener_task is not None:
@@ -563,32 +429,9 @@ async def _record_line(redis, session_id: str, text: str) -> None:
     await redis.expire(key, 30 * 24 * 3600)
 
 
-def _frame_to_rgb(frame: rtc.VideoFrame):
-    """RGB24 frame as [H, W, 3] uint8, scaled down to at most 640 px wide."""
-    import numpy as np
-    from PIL import Image
-
-    rgb = np.frombuffer(frame.data, dtype=np.uint8).reshape(frame.height, frame.width, 3)
-    if frame.width > 640:
-        h = round(frame.height * 640 / frame.width)
-        rgb = np.asarray(Image.fromarray(rgb).resize((640, h), Image.BILINEAR))
-    return rgb
-
-
-def _encode_jpeg(rgb) -> bytes:
-    import io
-
-    from PIL import Image
-
-    buf = io.BytesIO()
-    Image.fromarray(rgb).save(buf, format="JPEG", quality=80)
-    return buf.getvalue()
-
-
 def prewarm(proc: JobProcess) -> None:
-    """Load the VAD and camera-check models once per process instead of on every call."""
+    """Load the VAD model once per process instead of on every call."""
     proc.userdata["vad"] = silero.VAD.load()
-    proc.userdata["vision"] = get_models()
 
 
 if __name__ == "__main__":

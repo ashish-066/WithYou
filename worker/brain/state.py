@@ -10,7 +10,6 @@ from typing import Any, Literal
 
 from typing_extensions import TypedDict
 
-# DSAInterviewState is defined in dsa/models.py and imported lazily
 # to avoid circular imports during startup.
 # It is stored as a plain dict in InterviewState and validated on use.
 
@@ -115,15 +114,9 @@ class SlowTask(TypedDict):
 
     task_id: str
     task_type: Literal[
-        "profile_crawl",
         "report_descriptive",
         "report_data",
         "deep_analysis",
-        "verify_claims",
-        "hume_emotional_analysis",
-        # --- DSA Round 2 task types ---
-        "dsa_evaluate",   # Extract evidence + update rubric scores after a turn
-        "dsa_report",     # Generate final DSA report
     ]
     params: dict[str, Any]
     priority: int  # Lower = higher priority
@@ -153,67 +146,6 @@ class DFAState(TypedDict):
     previous_state: DFAStateType | None
     transitions: list[str]  # History of state transitions
     transition_count: int
-
-
-# =============================================================================
-# Anti-Cheating Types
-# =============================================================================
-
-
-class CheatFlag(TypedDict):
-    """A detected cheating indicator from proctoring system.
-
-    These flags are sent from the client-side proctoring (camera analysis)
-    or detected server-side through behavioral analysis.
-    """
-
-    id: str  # Unique flag ID
-    flag_type: Literal[
-        "multiple_faces",  # More than one person detected in frame
-        "no_face",  # Candidate face not visible
-        "phone_detected",  # Mobile phone visible in frame
-        "earphone_detected",  # Earphone/earbud detected
-        "tab_switch",  # Candidate switched browser tab/window
-        "screen_share",  # Screen sharing detected
-        "voice_change",  # Different voice detected (possible coaching)
-        "copy_paste",  # Copy-paste behavior detected
-        "ai_assistance",  # AI-generated response suspected
-        "suspicious_timing",  # Unusually fast/slow response
-        "blocked_app",  # Desktop app: a blocked app was open during the interview
-        "second_screen",  # Desktop app: an extra screen was connected
-        "app_closed",  # Desktop app: closed or crashed before the interview was submitted
-        "exit_attempt",  # Desktop app: candidate tried to close it
-        "emergency_exit",  # Desktop app: candidate used the emergency exit
-        "lock_expired",  # Desktop app: unlocked itself at its time limit
-        "browser_mode",  # Interview taken in a browser, without the locked app
-    ]
-    severity: Literal["low", "medium", "high", "critical"]
-    confidence: float  # 0-1, detection confidence
-    description: str  # Human-readable description
-    evidence: str | None  # Additional evidence (e.g., screenshot hash, detection details)
-    timestamp: str  # ISO 8601 format
-    turn_number: int  # Interview turn when detected
-
-
-class IntegrityReport(TypedDict):
-    """Summary of candidate integrity during the interview.
-
-    Generated at the end of the interview for review.
-    """
-
-    integrity_score: float  # 0-1, overall integrity assessment
-    total_flags: int
-    flags_by_type: dict[str, int]  # Count by flag_type
-    flags_by_severity: dict[str, int]  # Count by severity
-    critical_incidents: list[CheatFlag]  # High/critical severity flags
-    timeline: list[CheatFlag]  # All flags in chronological order
-    recommendation: Literal[
-        "proceed",  # No significant issues
-        "review",  # Some flags, needs human review
-        "flag",  # Multiple issues, interview may be compromised
-        "reject",  # Critical violations detected
-    ]
-    summary: str  # AI-generated summary of integrity concerns
 
 
 # =============================================================================
@@ -331,30 +263,6 @@ class CandidateProfile(TypedDict, total=False):
 
 
 # =============================================================================
-# Emotional Analysis Types (Hume.AI)
-# =============================================================================
-
-
-class EmotionalTimepoint(TypedDict):
-    """Single timestamp emotional data point."""
-
-    timestamp: float  # Seconds from video start
-    confidence: float  # 0-1 (aggregated from Hume emotions)
-    stress: float  # 0-1
-    engagement: float  # 0-1
-    energy: float  # 0-1
-
-
-class EmotionalInsights(TypedDict):
-    """Structured emotional analysis results from Hume.AI."""
-
-    summary: dict[str, float]  # avg_confidence, avg_stress, avg_engagement, avg_energy
-    timeline: list[EmotionalTimepoint]
-    highlights: list[str]  # Key emotional moments
-    overall_profile: Literal["confident", "anxious", "neutral", "variable"]
-
-
-# =============================================================================
 # Main Interview State
 # =============================================================================
 
@@ -367,21 +275,6 @@ class InterviewState(TypedDict, total=False):
 
     Extended for dual-brain architecture with DFA routing.
     """
-
-    # =========================================================================
-    # Interview Mode (Round 1 vs Round 2 DSA)
-    # =========================================================================
-    # None or "round1" → existing behaviour, all DSA fields are ignored.
-    # "round2_dsa"    → DSA interview engine is active; dsa_state is populated.
-    interview_mode: Literal["round1", "round2_dsa"] | None
-
-    # =========================================================================
-    # DSA Round 2 State
-    # =========================================================================
-    # Stored as a plain dict (DSAInterviewState) so it serialises cleanly
-    # through Redis without additional import complexity in LangGraph.
-    # Use dsa.models.DSAInterviewState for type hints when reading/writing.
-    dsa_state: dict[str, Any] | None
 
     # =========================================================================
     # Identifiers
@@ -483,13 +376,6 @@ class InterviewState(TypedDict, total=False):
     skill_tree: SkillTreeState | None
 
     # =========================================================================
-    # Anti-Cheating / Proctoring
-    # =========================================================================
-    cheat_flags: list[CheatFlag]
-    integrity_score: float  # 0-1, updated as flags are added
-    integrity_report: IntegrityReport | None
-
-    # =========================================================================
     # Interview Control
     # =========================================================================
     interview_ended: bool
@@ -499,13 +385,6 @@ class InterviewState(TypedDict, total=False):
     flow: dict[str, Any]
     # One-turn instruction for the interviewer from the system (never from the candidate)
     interviewer_instruction: str
-
-    # =========================================================================
-    # Emotional Analysis (Hume.AI)
-    # =========================================================================
-    emotional_analysis_status: Literal["not_started", "queued", "processing", "completed", "failed"]
-    emotional_analysis: EmotionalInsights | None
-    hume_job_id: str | None
 
     # =========================================================================
     # Security Events
@@ -598,19 +477,11 @@ def create_default_interview_state(session_id: str) -> InterviewState:
         analytics_data=None,
         # Skill Tree Scoring
         skill_tree=None,
-        # Anti-Cheating
-        cheat_flags=[],
-        integrity_score=1.0,  # Start with full integrity
-        integrity_report=None,
         # Control
         interview_ended=False,
         end_reason=None,
         flow={},
         interviewer_instruction="",
-        # Interview Mode (Round 1 default)
-        interview_mode="round1",
-        # DSA State (None for Round 1)
-        dsa_state=None,
         # Metadata
         started_at=now,
         last_updated=now,

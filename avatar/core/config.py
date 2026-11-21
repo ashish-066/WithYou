@@ -80,6 +80,8 @@ class Settings(BaseSettings):
 
     # TTS Configuration (Cartesia via LiveKit Inference)
     cartesia_api_key: str = ""  # Optional: uses LiveKit Inference if empty
+    # Sarvam (Malayalam STT/TTS and the sarvam-105b brain); https://dashboard.sarvam.ai
+    sarvam_api_key: str = ""
 
     # Agent Configuration
     agent_name: str = "Presence"
@@ -90,34 +92,21 @@ Ask follow-up questions to understand the candidate's experience deeply.
 Never use markdown, bullet points, or special formatting - speak naturally."""
 
     # S3 Configuration for Egress
-    s3_endpoint: str = ""
-    s3_access_key: str = ""
-    s3_secret_key: str = ""
-    s3_bucket: str = "presence-view-recordings"
-    s3_region: str = "eu-north-1"
 
     # Context Configuration (Must match worker config)
     context_prefix: str = "context"
 
-    # ELO Configuration (Must match worker scoring/elo_system.py constants)
-    elo_default_rating: float = 1500.0
-    elo_min_candidates_for_ranking: int = 2
 
     # Auth Configuration
-    # Signs session cookies and invite links. Required (32+ chars) in production;
+    # Signs session cookies. Required (32+ chars) in production;
     # development falls back to a fixed insecure value so restarts keep you logged in.
     auth_secret: str = ""
-    session_ttl_hours: int = 12  # recruiter login
-    candidate_session_ttl_hours: int = 4  # candidate access to one interview
-    invite_default_ttl_hours: int = 72
-    invite_max_ttl_hours: int = 336
+    session_ttl_hours: int = 12  # learner login
     # Public sign-up creates a new organization; off in production unless enabled
     allow_signup: bool | None = None
     # Browser origins allowed to call the API (comma-separated). The Vite dev
     # proxy makes the frontend same-origin, so this matters for deployed setups.
     cors_origins: str = "http://localhost:3000"
-    # Scalability demo endpoints (start/stop fake sessions, spawn workers)
-    enable_demo: bool | None = None
     # Reverse proxies in front of the API that append to X-Forwarded-For
     # (frontend nginx = 1; nginx behind a cloud load balancer = 2). The client
     # IP for rate limits is read that many entries from the right, so a client
@@ -139,9 +128,6 @@ Never use markdown, bullet points, or special formatting - speak naturally."""
     def signup_enabled(self) -> bool:
         return self.allow_signup if self.allow_signup is not None else not self.is_production
 
-    @property
-    def demo_enabled(self) -> bool:
-        return self.enable_demo if self.enable_demo is not None else not self.is_production
 
     @property
     def cors_origin_list(self) -> list[str]:

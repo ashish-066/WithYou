@@ -1,10 +1,9 @@
 /**
- * Interview room component with LiveKit video/audio.
- * Modern dark UI with BeyondPresence avatar and control bar.
+ * Live study room: LiveKit audio, the BeyondPresence avatar and a control bar.
+ * The learner sends audio only (no camera).
  */
 
 import { useCallback, useState } from 'react';
-import { CameraWarning } from './CameraWarning';
 import { ConfirmEndDialog } from './ConfirmEndDialog';
 import {
   LiveKitRoom,
@@ -34,13 +33,12 @@ export function InterviewRoom({ serverUrl, token, onDisconnect, onEnd }: Intervi
       token={token}
       connect={true}
       audio={true}
-      video={true}
+      video={false}
       onDisconnected={handleDisconnected}
       className="h-screen w-screen bg-black overflow-hidden"
     >
       <InterviewContent onEnd={onEnd} />
       <RoomAudioRenderer />
-      <CameraWarning />
     </LiveKitRoom>
   );
 }
@@ -101,7 +99,6 @@ function InterviewContent({ onEnd }: { onEnd: () => void }) {
 
   // State for mic/camera toggles
   const [isMicOn, setIsMicOn] = useState(true);
-  const [isCameraOn, setIsCameraOn] = useState(true);
 
 
   // Get all video tracks (Camera, ScreenShare, Unknown) to catch any avatar video stream
@@ -120,18 +117,8 @@ function InterviewContent({ onEnd }: { onEnd: () => void }) {
        track.participant.identity.includes('agent'))
   );
 
-  // Find the local user's video track for the self-view
-  const localVideoTrack = allVideoTracks.find(
-    (track) => track.participant.identity === localParticipant?.identity
-  );
-
-
-  // Camera checks (presence, other people, phones) run on the server, in the
-  // voice agent, on this video: the browser can't fake or block them
-
   // Speaking indicators
   const avatarParticipant = avatarVideoTrack?.participant;
-  const isUserSpeaking = localParticipant?.isSpeaking ?? false;
   const isAvatarSpeaking = avatarParticipant?.isSpeaking ?? false;
 
   // Toggle handlers
@@ -141,13 +128,6 @@ function InterviewContent({ onEnd }: { onEnd: () => void }) {
       setIsMicOn(!isMicOn);
     }
   }, [localParticipant, isMicOn]);
-
-  const toggleCamera = useCallback(async () => {
-    if (localParticipant) {
-      await localParticipant.setCameraEnabled(!isCameraOn);
-      setIsCameraOn(!isCameraOn);
-    }
-  }, [localParticipant, isCameraOn]);
 
   return (
     <div className="interview-container">
@@ -170,22 +150,6 @@ function InterviewContent({ onEnd }: { onEnd: () => void }) {
           </div>
         ) : (
           <VoiceWaveAnimation />
-        )}
-      </div>
-
-      {/* Self-view PIP - Bottom Right */}
-      <div className={`pip-container ${isUserSpeaking ? 'speaking' : ''}`}>
-        {localVideoTrack && isCameraOn ? (
-          <VideoTrack
-            trackRef={localVideoTrack}
-            className="pip-video"
-          />
-        ) : (
-          <div className="pip-placeholder">
-            <svg className="pip-icon" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
-          </div>
         )}
       </div>
 
@@ -212,24 +176,6 @@ function InterviewContent({ onEnd }: { onEnd: () => void }) {
             title={isMicOn ? "Mute microphone" : "Unmute microphone"}
           />
 
-          {/* Camera Button */}
-          <ControlButton
-            icon={
-              isCameraOn ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
-                </svg>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z" />
-                </svg>
-              )
-            }
-            hasDropdown={true}
-            onClick={toggleCamera}
-            isActive={isCameraOn}
-            title={isCameraOn ? "Turn off camera" : "Turn on camera"}
-          />
         </div>
 
         {/* End Call Button */}

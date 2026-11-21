@@ -43,9 +43,9 @@ def test_production_requires_strong_auth_secret_and_explicit_cors():
     assert "CORS_ORIGINS" in str(e.value)
 
 
-def test_signup_and_demo_off_by_default_in_production():
+def test_signup_off_by_default_in_production():
     s = Settings(_env_file=None, environment="production", **FULL)
-    assert not s.signup_enabled and not s.demo_enabled
+    assert not s.signup_enabled
     assert Settings(_env_file=None).signup_enabled
 
 

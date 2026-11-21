@@ -1,27 +1,23 @@
 """Fast Brain subgraph for conversation handling.
 
-Low-latency processing for interview dialogue using Gemini Flash.
+Low-latency processing for the conversation.
 Handles:
-- Understanding candidate responses
-- Generating interviewer responses
-- Quick tool execution (search, timestamps)
-- Claim detection for verification queue
+- Understanding the learner's turn
+- Generating the reply (published before any scoring)
+- Quick tool execution (timestamps)
 - Real-time response scoring
 
 Now supports hybrid routing: consumes tool suggestions from LLM router.
 """
 
 import logging
-import uuid
 from datetime import datetime, timezone
 from typing import Any
 
 from langgraph.graph import END, StateGraph
 
-from brain.candidate_background import profile_for_checks
 from brain.services.reply_publisher import publish_reply_early
 from brain.state import (
-    Claim,
     InterviewState,
     Message,
     TimestampNote,
@@ -30,7 +26,6 @@ from brain.state import (
 )
 from brain.tools.fast.conversation import conversation_tool
 from brain.tools.fast.response_scorer import score_response
-from brain.tools.fast.tavily_search import tavily_search_tool
 from brain.tools.fast.timestamp_noter import timestamp_noter_tool
 from brain.tools.fast.tool_decider import tool_decider
 
@@ -101,7 +96,7 @@ async def understand_node(state: InterviewState) -> dict[str, Any]:
                 continue
 
             # Only process fast brain tools
-            if tool_name not in {"tavily_search", "timestamp_noter"}:
+            if tool_name not in {"timestamp_noter"}:
                 continue
 
             params = suggested_params.get(tool_name, {})
@@ -191,11 +186,7 @@ async def execute_tools_node(state: InterviewState) -> dict[str, Any]:
         try:
             result = None
 
-            if tool_name == "tavily_search":
-                query = params.get("query", state.get("current_input", "")[:100])
-                result = await tavily_search_tool(query)
-
-            elif tool_name == "timestamp_noter":
+            if tool_name == "timestamp_noter":
                 result = await timestamp_noter_tool(
                     tag=params.get("tag", "key_insight"),
                     content=params.get("content", state.get("current_input", "")[:200]),
@@ -250,78 +241,12 @@ async def execute_tools_node(state: InterviewState) -> dict[str, Any]:
 async def respond_node(state: InterviewState) -> dict[str, Any]:
     """Generate the interviewer's response using conversation tool.
 
-    Uses Gemini Flash for low-latency response generation.
-    Also scores the candidate's response in real-time.
-
-    DSA mode: When interview_mode == 'round2_dsa', dispatches to the
-    DSA conversation tool instead of the general conversation tool.
-    The DSA tool uses deterministic action selection + constrained LLM phrasing.
+    The reply is published as soon as it exists; scoring runs afterwards.
     """
     session_id = state.get("session_id", "unknown")
     current_input = state.get("current_input", "")
-    interview_mode = state.get("interview_mode", "round1")
 
-    logger.info(f"[FAST/RESPOND] Session {session_id}: Generating response (mode={interview_mode})")
-
-    # -------------------------------------------------------------------------
-    # DSA Round 2 — delegate to DSA conversation tool
-    # -------------------------------------------------------------------------
-    if interview_mode == "round2_dsa":
-        try:
-            from brain.tools.fast.dsa_conversation import dsa_conversation_tool
-            dsa_result = await dsa_conversation_tool(state)
-            response = dsa_result.get("response", "Let's continue — can you walk me through your approach?")
-            dsa_state_update = dsa_result.get("dsa_state", state.get("dsa_state"))
-
-            # Speak now; the evaluation below (up to 8s) only updates scoring state
-            await publish_reply_early(response)
-
-            # Add to message history
-            messages = list(state.get("messages", []))
-            timestamp = datetime.now(timezone.utc).isoformat()
-            messages.append(Message(role="user", content=current_input, timestamp=timestamp))
-            messages.append(Message(role="assistant", content=response, timestamp=timestamp))
-
-            # Extract evidence inline (not via the slow-task queue: pending slow
-            # tasks hijack the next turn's routing into the slow brain).
-            # System inputs ([CODE EXECUTION], [NO ANSWER], ...) are not answers
-            if current_input and not current_input.startswith("["):
-                try:
-                    import asyncio
-
-                    from dsa.tools.slow.dsa_evaluator import evaluate_dsa_turn
-
-                    eval_state = dict(state)
-                    eval_state["messages"] = messages
-                    eval_state["dsa_state"] = dsa_state_update
-                    eval_result = await asyncio.wait_for(
-                        evaluate_dsa_turn(state=eval_state, params={}), timeout=8
-                    )
-                    if eval_result and eval_result.get("dsa_state"):
-                        dsa_state_update = eval_result["dsa_state"]
-                except Exception as e:
-                    logger.warning(f"[FAST/RESPOND/DSA] inline evaluation skipped: {e}")
-
-            logger.info(
-                f"[FAST/RESPOND/DSA] Session {session_id}: "
-                f"action={( dsa_state_update or {}).get('last_action')}, "
-                f"turn={( dsa_state_update or {}).get('dsa_turn_count')}"
-            )
-
-            return {
-                "response": response,
-                "messages": messages,
-                "dsa_state": dsa_state_update,
-                "last_updated": timestamp,
-            }
-
-        except Exception as e:
-            logger.error(f"[FAST/RESPOND/DSA] DSA conversation tool failed: {e}, falling back to generic", exc_info=True)
-            # Fallthrough to Round 1 path on error
-
-    # -------------------------------------------------------------------------
-    # Round 1 — original conversation tool (unchanged)
-    # -------------------------------------------------------------------------
+    logger.info(f"[FAST/RESPOND] Session {session_id}: Generating response")
 
     # Call conversation tool
     result = await conversation_tool(state)
@@ -329,12 +254,10 @@ async def respond_node(state: InterviewState) -> dict[str, Any]:
     if not result.success:
         logger.error(f"[FAST/RESPOND] Conversation tool failed: {result.error}")
         response = "That's interesting — could you tell me a bit more about that?"
-        claims_detected: list[str] = []
         topics_touched: list[str] = []
     else:
         data = result.data
         response = data.get("response_text", "Could you tell me more about that?")
-        claims_detected = data.get("claims_detected", [])
         topics_touched = data.get("topics_touched", [])
 
     # Speak now; response scoring and skill-tree scoring run after this
@@ -375,19 +298,6 @@ async def respond_node(state: InterviewState) -> dict[str, Any]:
     for topic in topics_touched:
         if topic not in topics_covered:
             topics_covered.append(topic)
-
-    # Queue claims for verification (will be handled by slow brain)
-    pending_claims = list(state.get("pending_claims", []))
-    for claim_text in claims_detected:
-        pending_claims.append(
-            Claim(
-                id=str(uuid.uuid4()),
-                claim_type="technology",  # Default type, can be refined later
-                content=claim_text,
-                source_text=current_input[:200],
-                timestamp=timestamp,
-            )
-        )
 
     # Score the candidate's response in real-time
     running_scores = dict(state.get("running_scores", {}))
@@ -442,34 +352,6 @@ async def respond_node(state: InterviewState) -> dict[str, Any]:
         )
         logger.debug(f"[FAST/RESPOND] Added periodic topic note at turn {turn_count}")
 
-    # Trigger background claim verification (runs async, doesn't block response)
-    # This replaces the previous slow task queueing approach for more reliable verification
-    from brain.services.background_verifier import trigger_background_verification
-
-    new_claims_count = len(pending_claims) - len(state.get("pending_claims", []))
-
-    # Verify if: 3+ pending claims AND (new claims detected OR every 5th turn)
-    should_verify = len(pending_claims) >= 3 and (new_claims_count > 0 or turn_count % 5 == 0)
-
-    if should_verify:
-        # Get claims that haven't been verified yet
-        already_verified_ids = {
-            v.get("claim", {}).get("id") for v in state.get("verified_claims", [])
-        }
-        unverified_claims = [c for c in pending_claims if c.get("id") not in already_verified_ids]
-
-        if unverified_claims:
-            trigger_background_verification(
-                session_id=session_id,
-                claims=unverified_claims,
-                # Gathered background plus the resume as written
-                candidate_profile=profile_for_checks(state),
-            )
-            logger.info(
-                f"[FAST/RESPOND] Triggered background verification for "
-                f"{len(unverified_claims)} claims"
-            )
-
     # Update DFA state
     dfa = state.get("dfa", {})
     if dfa:
@@ -480,7 +362,6 @@ async def respond_node(state: InterviewState) -> dict[str, Any]:
         "messages": messages,
         "response": response,
         "topics_covered": topics_covered,
-        "pending_claims": pending_claims,
         "running_scores": running_scores,
         "timestamp_notes": timestamp_notes,
         "dfa": dfa,

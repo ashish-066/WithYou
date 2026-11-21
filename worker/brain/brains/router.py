@@ -111,22 +111,6 @@ PATTERNS: dict[str, list[PatternConfig]] = {
         PatternConfig(r"\bend\s+the\s+interview\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
         PatternConfig(r"\bfinish\s+(up|the|this)\b", 0.70),
     ],
-    # Profile-related requests (slow brain)
-    "profile_request": [
-        PatternConfig(
-            r"\bgithub\s+(profile|account|repo)\b", CONFIDENCE_EXACT_MATCH, is_strong=True
-        ),
-        PatternConfig(r"\blinkedin\s+(profile|page)\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
-        PatternConfig(
-            r"\b(check|look\s*at|review)\s+(my|the|their)\s+(github|linkedin)\b",
-            0.95,
-            is_strong=True,
-        ),
-        PatternConfig(r"\bresume\b", 0.85),
-        PatternConfig(r"\bcv\b", 0.85),
-        PatternConfig(r"\bverif(y|ication)\b", 0.70),  # Could be about something else
-        PatternConfig(r"\bprofile\b", 0.50),  # Very ambiguous alone
-    ],
     # Report requests (slow brain)
     "report_request": [
         PatternConfig(
@@ -152,71 +136,31 @@ PATTERNS: dict[str, list[PatternConfig]] = {
         PatternConfig(r"\banalysis\b", 0.45),  # Too common, needs context
         PatternConfig(r"\banalyze\b", 0.45),
     ],
-    # Search requests (fast brain with search tool)
-    "search_request": [
-        PatternConfig(r"\b(search|look\s*up|google)\s+(for\s+)?\b", 0.90, is_strong=True),
-        PatternConfig(r"\bwhat\s+is\s+.{15,}\b", 0.75),  # Long "what is" questions
-        PatternConfig(r"\blatest\s+(version|release|news)\b", 0.85),
-        PatternConfig(r"\bhttps?://\S+\b", 0.95, is_strong=True),  # URLs
-        PatternConfig(r"\bfind\s+(information|details)\s+about\b", 0.80),
-    ],
     # Questions (fast brain)
     "question": [
         PatternConfig(r"\?$", 0.70),  # Ends with question mark
         PatternConfig(r"^(what|why|how|when|where|who|which)\s+", 0.65),
         PatternConfig(r"^(can|could|would|do|does|is|are)\s+", 0.55),
     ],
-    # DSA: candidate submitting or discussing code (fast brain — DSA mode)
-    "dsa_code_turn": [
-        PatternConfig(r"\bdef\s+\w+\s*\(", 0.95, is_strong=True),   # Python function def
-        PatternConfig(r"\bclass\s+\w+", 0.90, is_strong=True),       # Python class
-        PatternConfig(r"\breturn\s+", 0.80),
-        PatternConfig(r"\bfor\s+\w+\s+in\s+", 0.85, is_strong=True), # for loop
-        PatternConfig(r"\bwhile\s+.+:", 0.85, is_strong=True),        # while loop
-        PatternConfig(r"\bif\s+.+:", 0.70),
-        PatternConfig(r"```", 0.90, is_strong=True),                   # code fence
-    ],
-    # DSA: candidate explaining complexity (fast brain — DSA mode)
-    "dsa_complexity_turn": [
-        PatternConfig(r"\bO\s*\(", 0.95, is_strong=True),             # Big-O notation
-        PatternConfig(r"\btime\s+complexity\b", 0.90, is_strong=True),
-        PatternConfig(r"\bspace\s+complexity\b", 0.90, is_strong=True),
-        PatternConfig(r"\blinear\s+time\b", 0.85, is_strong=True),
-        PatternConfig(r"\bquadratic\b", 0.85, is_strong=True),
-        PatternConfig(r"\blogarithmic\b", 0.80),
-        PatternConfig(r"\bconstant\s+space\b", 0.80),
-    ],
 }
 
 # Tool suggestions for each classification
 CLASSIFICATION_TOOLS: dict[str, list[str]] = {
     "end_signal": [],
-    "profile_request": ["profile_crawler"],
     "report_request": ["report_descriptive", "report_data"],
     "deep_analysis": ["deep_analysis"],
-    "search_request": ["tavily_search", "conversation"],
     "question": ["conversation"],
     "conversation": ["conversation"],
-    "slow_task_trigger": [],  # No tools needed, just process pending tasks
-    # DSA Round 2
-    "dsa_code_turn": ["conversation"],       # Fast brain handles it
-    "dsa_complexity_turn": ["conversation"], # Fast brain handles it
     "unknown": ["conversation"],
 }
 
 # Brain mapping for classifications
 CLASSIFICATION_BRAIN: dict[str, Literal["fast", "slow", "end"]] = {
     "end_signal": "end",
-    "profile_request": "slow",
     "report_request": "slow",
     "deep_analysis": "slow",
-    "slow_task_trigger": "slow",  # Route to slow brain to process pending tasks
-    "search_request": "fast",
     "question": "fast",
     "conversation": "fast",
-    # DSA Round 2 — always fast brain (slow brain handles async evaluation tasks)
-    "dsa_code_turn": "fast",
-    "dsa_complexity_turn": "fast",
     "unknown": "fast",
 }
 
@@ -335,10 +279,8 @@ def classify_input(
 ) -> Literal[
     "conversation",
     "question",
-    "profile_request",
     "report_request",
     "deep_analysis",
-    "search_request",
     "end_signal",
     "unknown",
 ]:
@@ -461,7 +403,7 @@ def route_to_brain(state: InterviewState) -> Literal["fast", "slow", "end"]:
     # Rule 3: Route based on input classification
     input_type = router.get_input_type(state)
 
-    slow_types = {"profile_request", "report_request", "deep_analysis", "slow_task_trigger"}
+    slow_types = {"report_request", "deep_analysis"}
     if input_type in slow_types:
         logger.info(f"Routing to SLOW brain: input type is '{input_type}'")
         return "slow"
@@ -497,59 +439,17 @@ async def input_processor_node(state: InterviewState) -> dict[str, Any]:
     """Process and classify input before routing.
 
     This node:
-    1. Merges background verification results from Redis
-    2. Checks for prompt injection attacks (SECURITY LAYER 1)
-    3. Runs the pre-filter for fast classification
-    4. Invokes LLM router if confidence is low
-    5. Updates DFA state
-    6. Manages message window (keeps last 10)
+    1. Checks for prompt injection attacks (SECURITY LAYER 1)
+    2. Runs the pre-filter for fast classification
+    3. Invokes LLM router if confidence is low
+    4. Updates DFA state
+    5. Manages message window (keeps last 10)
     """
     from brain.brains.llm_router import hybrid_route
-    from brain.services.background_verifier import get_pending_verification_results
     from core.prompt_injection import detect_injection
 
     # Track state updates to merge at the end
     state_updates: dict[str, Any] = {}
-
-    # =========================================================================
-    # Merge background verification results from Redis
-    # =========================================================================
-    session_id = state.get("session_id")
-    if session_id:
-        bg_results = await get_pending_verification_results(session_id)
-        if bg_results:
-            bg_claim_count = bg_results.get("claim_count", 0)
-            logger.info(
-                f"[INPUT_PROCESSOR] Merging {bg_claim_count} background verification results"
-            )
-
-            # Import trust score calculator
-            from brain.brains.slow_brain import _calculate_trust_score
-
-            # Merge verified claims
-            existing_verified = list(state.get("verified_claims", []))
-            new_verified = bg_results.get("verified_claims", [])
-            merged_verified = existing_verified + new_verified
-
-            # Recalculate trust score with all verified claims
-            merged_trust = _calculate_trust_score(merged_verified)
-
-            # Remove verified claims from pending list
-            verified_ids = {v.get("claim", {}).get("id") for v in new_verified if v.get("claim")}
-            remaining_pending = [
-                c for c in state.get("pending_claims", []) if c.get("id") not in verified_ids
-            ]
-
-            # Store updates for later
-            state_updates["verified_claims"] = merged_verified
-            state_updates["trust_score"] = merged_trust
-            state_updates["pending_claims"] = remaining_pending
-
-            logger.info(
-                f"[INPUT_PROCESSOR] Merged verification: "
-                f"verified={len(merged_verified)}, pending={len(remaining_pending)}, "
-                f"trust_score={merged_trust:.2f}"
-            )
 
     # SECURITY LAYER 1: Check for prompt injection attacks
     current_input = state.get("current_input", "")
@@ -598,21 +498,6 @@ async def input_processor_node(state: InterviewState) -> dict[str, Any]:
 
     # Run pre-filter first
     prefilter_result = run_prefilter(state)
-
-    # Force profile request if not started but URLs exist
-    if (
-        state.get("profile_status") == "not_started"
-        and state.get("candidate_urls")
-        and not state.get("candidate_profile")
-    ):
-        logger.info("[INPUT_PROCESSOR] Auto-detecting profile crawl request")
-        prefilter_result = PrefilterResult(
-            classification="profile_request",
-            confidence=1.0,
-            matched_patterns=["auto_init"],
-            suggested_brain="slow",
-            suggested_tools=["profile_crawler"],
-        )
 
     # Decide if we need LLM routing
     if prefilter_result.confidence >= PREFILTER_CONFIDENCE_THRESHOLD:

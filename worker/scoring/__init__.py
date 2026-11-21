@@ -4,7 +4,6 @@ This module implements a deterministic, explainable scoring system that:
 1. Parses job descriptions to extract skills and generate depth ladders
 2. Extracts evidence from interview conversations using constrained LLM calls
 3. Builds skill trees that grow as evidence accumulates
-4. Compares candidates using weighted Elo rankings
 
 The system is designed to be:
 - Deterministic: Same inputs produce same outputs
@@ -12,7 +11,6 @@ The system is designed to be:
 - Fair: Skill transferability prevents penalizing equivalent experience
 """
 
-from scoring.elo_system import EloSystem
 from scoring.evidence_extractor import EvidenceExtractor
 from scoring.integration import (
     ScoringIntegration,
@@ -64,7 +62,6 @@ __all__ = [
     "SkillTreeManager",
     "QuestionSelector",
     "ScoreCalculator",
-    "EloSystem",
     # Integration
     "ScoringIntegration",
     "scoring_process_exchange_node",

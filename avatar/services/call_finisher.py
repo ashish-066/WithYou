@@ -1,7 +1,7 @@
 """Ending a call: one path for the End button and for the voice agent.
 
-The voice agent ends interviews itself (silence, out of view, connection lost,
-or after the goodbye of an interview the worker concluded), so the cleanup
+The voice agent ends sessions itself (silence, connection lost, or after the
+goodbye of a session the worker concluded), so the cleanup
 lives here rather than in the HTTP route.
 """
 
@@ -23,7 +23,6 @@ async def finish_call(call: dict, end_reason: str, *, publish_end_signal: bool) 
     agent's ends are already known to the worker.
     """
     session_id = call["session_id"]
-    egress_id = call.get("egress_id")
 
     if publish_end_signal:
         # Triggers the conclude step, which writes the report
@@ -43,17 +42,11 @@ async def finish_call(call: dict, end_reason: str, *, publish_end_signal: bool) 
             # Don't fail the cleanup; the worker's inactivity sweep ends it later
             logger.warning(f"Failed to publish end_call signal: {e}")
 
-    # Stop recording if active (the file is uploaded to private storage by
-    # LiveKit egress; viewers get short-lived signed links, never a stored URL)
-    if egress_id:
-        await livekit_service.stop_recording(egress_id)
-
     await update_interview(
         session_id,
         status="ended",
         ended_at=now(),
         end_reason=end_reason,
-        **({"recording_status": "completed"} if egress_id else {}),
     )
 
     # Disconnects everyone; a rejoin is refused from now on (no active call)

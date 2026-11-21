@@ -1,17 +1,11 @@
 /**
- * Auth API: sign-in, team members and candidate invites.
+ * Auth API: learner sign-in.
  *
  * The session lives in an HttpOnly cookie set by the server, so requests need
  * no token handling: same-origin fetches send the cookie automatically.
  */
 
-import type {
-  AuthUser,
-  CandidateInvite,
-  CreateInviteRequest,
-  CreatedInvite,
-  InviteInfo,
-} from '../types';
+import type { AuthUser } from '../types';
 
 const API_BASE = '/api/auth';
 
@@ -45,7 +39,6 @@ export function login(email: string, password: string): Promise<AuthUser> {
 }
 
 export function signup(params: {
-  org_name: string;
   name: string;
   email: string;
   password: string;
@@ -59,30 +52,4 @@ export async function logout(): Promise<void> {
 
 export function getAuthConfig(): Promise<{ signup_enabled: boolean }> {
   return request('/config');
-}
-
-export function listUsers(): Promise<{ users: AuthUser[] }> {
-  return request('/users');
-}
-
-export function addUser(params: {
-  name: string;
-  email: string;
-  password: string;
-  role: 'admin' | 'recruiter';
-}): Promise<AuthUser> {
-  return request('/users', { method: 'POST', body: JSON.stringify(params) });
-}
-
-export function createInvite(params: CreateInviteRequest): Promise<CreatedInvite> {
-  return request('/invites', { method: 'POST', body: JSON.stringify(params) });
-}
-
-export function listInvites(): Promise<{ invites: CandidateInvite[] }> {
-  return request('/invites');
-}
-
-/** What an invite link is for (token goes in the body, not the URL). */
-export function lookupInvite(token: string): Promise<InviteInfo> {
-  return request('/invites/lookup', { method: 'POST', body: JSON.stringify({ token }) });
 }

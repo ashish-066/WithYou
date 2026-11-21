@@ -15,7 +15,6 @@ STATE = {
     "running_scores": {"technical": 7.5},
     "trust_score": 0.9,
     "skill_tree": {"skills": {"python": 3}},
-    "cheat_flags": [],
     "messages": [{"role": "user", "content": "hi"}],
 }
 
@@ -44,13 +43,13 @@ async def test_resave_keeps_owner_and_first_end_time(db):
     await save_interview_outcome("session-1", STATE)
     first_end = (await get("session-1")).ended_at
 
-    later = {**STATE, "analytics_data": {"dsa_report": "done"}}
+    later = {**STATE, "analytics_data": {"summary_card": "done"}}
     await save_interview_outcome("session-1", later)
 
     row = await get("session-1")
     assert row.org_id == "org-1" and row.candidate_name == "Cara"
     assert row.ended_at == first_end
-    assert row.analytics == {"dsa_report": "done"}
+    assert row.analytics == {"summary_card": "done"}
 
 
 async def test_processor_saves_outcome_when_interview_ends(db, redis):

@@ -94,17 +94,8 @@ def test_unanswered_and_returned_replace_the_question():
     d2 = flow.before_candidate_turn(state(flow=d.flow), "answer", NOW)
     assert (d2.flow["unanswered_total"], d2.flow["unanswered_in_a_row"]) == (1, 0)
 
-    r = flow.on_returned(state(interview_mode="round2_dsa"))
-    assert r.instruction == flow.INSTRUCTIONS["replace_question_coding"] and r.flow["absences"] == 1
-
-
-def test_long_silence_then_long_answer_is_flagged():
-    long_answer = " ".join(["word"] * 80)
-    f, flag = flow.record_timing(state(), 24_000, long_answer, 5, NOW)
-    assert flag["flag_type"] == "suspicious_timing" and "24 s" in flag["description"]
-    assert f["response_timings"] == [{"turn": 5, "latency_ms": 24_000, "words": 80}]
-    assert flow.record_timing(state(), 24_000, "short answer", 5, NOW)[1] is None
-    assert flow.record_timing(state(), 2_000, long_answer, 5, NOW)[1] is None
+    r = flow.on_returned(state())
+    assert r.instruction == flow.INSTRUCTIONS["replace_question"] and r.flow["absences"] == 1
 
 
 def test_completion_summary_is_honest_about_incomplete_interviews():
@@ -160,7 +151,7 @@ async def test_processor_confirms_goodbye_and_signals_the_end(redis):
     assert (await p.context_manager.get_context("s1"))["end_reason"] == "candidate_ended"
 
 
-async def test_processor_moves_on_after_no_answer_and_records_timing(redis):
+async def test_processor_moves_on_after_no_answer(redis):
     graph = EchoGraph()
     p = MessageProcessor(redis, graph=graph)
 
@@ -174,8 +165,6 @@ async def test_processor_moves_on_after_no_answer_and_records_timing(redis):
     ctx = await p.context_manager.get_context("s1")
     assert ctx["interviewer_instruction"] == ""  # one turn only
     assert ctx["flow"]["unanswered_total"] == 1
-    assert ctx["flow"]["response_timings"][-1]["latency_ms"] == 25000
-    assert any(f["flag_type"] == "suspicious_timing" for f in ctx["cheat_flags"])
 
 
 async def test_sweep_ends_idle_interviews_once(redis):
@@ -203,83 +192,3 @@ def test_state_flow_survives_redis_round_trip():
     back = cm._deserialize_context(cm._serialize_context(st), "s1")
     assert back["flow"] == {"phase": "closing", "absences": 2}
     assert json.loads(json.dumps(back["flow"]))  # plain JSON
-
-
-# =============================================================================
-# Follow-up checks (brain/verification_probe.py)
-# =============================================================================
-
-LONG_ANSWER = " ".join(["word"] * 70)
-
-
-def _judge(outcome, reason):
-    async def judge(probe, policy=None):
-        return outcome, reason
-
-    return judge
-
-
-async def _flagged_answer(p):
-    """A long silence, then a long answer: the interviewer is told to probe it."""
-    await p.process(msg(1, "candidate_response", LONG_ANSWER, response_latency_ms="24000"))
-    return await p.context_manager.get_context("s1")
-
-
-async def test_flagged_answer_gets_a_follow_up_and_a_good_answer_clears_it(redis, monkeypatch):
-    from brain import verification_probe as vp
-
-    graph = EchoGraph()
-    p = MessageProcessor(redis, graph=graph)
-    ctx = await _flagged_answer(p)
-    assert graph.seen[-1]["interviewer_instruction"] == vp.INSTRUCTION
-    probe = ctx["flow"]["verification_probes"][0]
-    assert (probe["outcome"], probe["question"], probe["words"], probe["latency_ms"]) == ("asked", "ok", 70, 24000)
-
-    monkeypatch.setattr(vp, "judge", _judge("passed", "Gave a concrete example from their project."))
-    await p.process(msg(2, "candidate_response", "We used it in the billing service to dedupe events", response_latency_ms="1500"))
-    ctx = await p.context_manager.get_context("s1")
-    assert graph.seen[-1]["interviewer_instruction"] == ""  # no second probe
-    probe = ctx["flow"]["verification_probes"][0]
-    assert probe["outcome"] == "passed" and probe["probe_latency_ms"] == 1500
-    flag = next(f for f in ctx["cheat_flags"] if f["flag_type"] == "suspicious_timing")
-    assert flag["severity"] == "low" and "Cleared" in flag["description"]
-    assert ctx["integrity_score"] > 0.99
-
-
-async def test_follow_up_that_fails_or_goes_unanswered_raises_the_flag(redis, monkeypatch):
-    from brain import verification_probe as vp
-
-    p = MessageProcessor(redis, graph=EchoGraph())
-    await _flagged_answer(p)
-    monkeypatch.setattr(vp, "judge", _judge("failed", "Repeated the first answer without explaining it."))
-    await p.process(msg(2, "candidate_response", "It is just the standard way that everyone does it", response_latency_ms="9000"))
-    ctx = await p.context_manager.get_context("s1")
-    flag = next(f for f in ctx["cheat_flags"] if f["flag_type"] == "suspicious_timing")
-    assert flag["severity"] == "high" and "could not explain it" in flag["description"]
-    assert "Repeated the first answer" in flag["description"]
-    assert ctx["integrity_score"] < 0.95
-
-    await redis.flushdb()
-    p = MessageProcessor(redis, graph=EchoGraph())
-    await _flagged_answer(p)
-    await p.process(msg(2, "question_unanswered"))
-    ctx = await p.context_manager.get_context("s1")
-    assert ctx["flow"]["verification_probes"][0]["outcome"] == "unanswered"
-    flag = next(f for f in ctx["cheat_flags"] if f["flag_type"] == "suspicious_timing")
-    assert flag["severity"] == "high" and "did not answer" in flag["description"]
-
-
-async def test_follow_up_judgement_rules():
-    from brain import verification_probe as vp
-
-    base = {"answer": "a", "question": "q", "probe_answer": "yes", "probe_words": 1, "probe_latency_ms": 900}
-    assert (await vp.judge(base))[0] == "failed"  # almost no answer
-
-    flow_ = {}
-    for n in range(5):
-        flow_, instruction = vp.start(flow_, {"flag_id": f"timing-{n}", "turn_number": n}, LONG_ANSWER, 23_000)
-        flow_, _ = vp.not_answered(flow_)
-    assert len(flow_["verification_probes"]) == vp.POLICY.max_per_interview and instruction == ""
-
-    lines = vp.report_lines({"flow": flow_})
-    assert len(lines) == 3 and "did not answer the follow-up" in lines[0]

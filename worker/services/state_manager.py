@@ -242,14 +242,11 @@ class ContextManager:
             "analytics_data",
             "dfa",
             "skill_tree",
-            "cheat_flags",
-            "dsa_state",
-            "integrity_report",
             "flow",
             "candidate_urls",
         }
         int_fields = {"turn_count", "max_turns", "report_attempts"}
-        float_fields = {"trust_score", "integrity_score"}
+        float_fields = {"trust_score"}
         bool_fields = {"interview_ended"}
 
         for key, value in data.items():

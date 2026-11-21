@@ -33,7 +33,6 @@ Interview Data:
 - Total Turns: {turn_count}
 - Topics Covered: {topics_covered}
 - Trust Score: {trust_score}
-- Integrity Score: {integrity_score}
 
 How the Interview Went:
 {interview_completion}
@@ -53,9 +52,6 @@ Timestamp Notes:
 Niche Achievements (OSS Programs, Hackathons, Notable Contributions):
 {niche_skills}
 
-Integrity/Proctoring Concerns:
-{integrity_concerns}
-
 Generate a detailed evaluation report in JSON format:
 {{
     "summary": "2-3 paragraph executive summary",
@@ -68,14 +64,12 @@ Generate a detailed evaluation report in JSON format:
         "Communication": "Assessment of communication skills...",
         "Experience": "Assessment of relevant experience...",
         "Cultural Fit": "Assessment of cultural alignment...",
-        "Niche Achievements": "Assessment of OSS program participation, hackathon wins, notable contributions...",
-        "Integrity Assessment": "Assessment of interview integrity based on proctoring data..."
+        "Niche Achievements": "Assessment of OSS program participation, hackathon wins, notable contributions..."
     }}
 }}
 
 Be objective, evidence-based, and cite specific moments from the interview.
 Consider niche achievements (GSoC, LFX, hackathon wins) as strong indicators of candidate quality.
-If there are significant integrity concerns (low integrity score or multiple flags), factor this into your recommendation.
 Be honest about how much evidence there is. If the interview ended early or incomplete (see How the
 Interview Went), say so in the first sentence of the summary, assess only what was actually covered,
 and do not give "strong_yes" or "strong_no". Name any skills that were not assessed instead of
@@ -89,7 +83,6 @@ Interview Data:
 - Total Turns: {turn_count}
 - Topics Covered: {topics_covered}
 - Trust Score: {trust_score}
-- Integrity Score: {integrity_score}
 
 Running Scores:
 {running_scores}
@@ -100,19 +93,14 @@ Timestamp Notes:
 Verification Results:
 {verification_results}
 
-Integrity Flags:
-{integrity_flags}
-
 Generate structured analytics data in JSON format:
 {{
     "rubric_scores": {{"technical_depth": 4.2, "problem_solving": 3.8, ...}},
     "skill_distribution": {{"Python": 5, "AWS": 3, ...}},
     "verification_summary": {{"verified": 5, "unverified": 2, "contradiction": 0}},
-    "integrity_summary": {{"total_flags": N, "by_type": {{"multiple_faces": 1, ...}}, "by_severity": {{"high": 1, ...}}}},
     "timeline": [
         {{"turn": 1, "event": "topic_intro", "topic": "experience"}},
         {{"turn": 5, "event": "strong_answer", "topic": "technical"}},
-        {{"turn": 8, "event": "integrity_flag", "flag_type": "tab_switch"}},
         ...
     ],
     "topic_coverage": {{"experience": 85, "technical": 70, "behavioral": 45}},
@@ -120,7 +108,6 @@ Generate structured analytics data in JSON format:
 }}
 
 Use only data from the interview - do not fabricate scores or events.
-Include integrity flags in the timeline with event type "integrity_flag".
 """
 
 
@@ -251,102 +238,6 @@ async def generate_analytics_report(
 # =============================================================================
 
 
-def _format_integrity_concerns(state: InterviewState) -> str:
-    """Format integrity/proctoring concerns for the descriptive report prompt.
-
-    Args:
-        state: Interview state containing cheat flags
-
-    Returns:
-        Formatted string of integrity concerns or 'No concerns detected'
-    """
-    cheat_flags = state.get("cheat_flags", [])
-    integrity_score = state.get("integrity_score", 1.0)
-
-    if not cheat_flags:
-        return "No integrity concerns detected during the interview."
-
-    lines = [f"Integrity Score: {integrity_score:.2f}/1.00"]
-
-    # Count by type and severity
-    by_type: dict[str, int] = {}
-    by_severity: dict[str, int] = {}
-
-    for flag in cheat_flags:
-        flag_type = flag.get("flag_type", "unknown")
-        severity = flag.get("severity", "medium")
-        by_type[flag_type] = by_type.get(flag_type, 0) + 1
-        by_severity[severity] = by_severity.get(severity, 0) + 1
-
-    # Summary by severity
-    if by_severity:
-        severity_parts = []
-        for sev in ["critical", "high", "medium", "low"]:
-            if by_severity.get(sev, 0) > 0:
-                severity_parts.append(f"{by_severity[sev]} {sev}")
-        lines.append(f"Flags by severity: {', '.join(severity_parts)}")
-
-    # List specific concerns
-    flag_descriptions = {
-        "multiple_faces": "Multiple faces detected (possible unauthorized assistance)",
-        "phone_detected": "Mobile phone visible (possible answer lookup)",
-        "earphone_detected": "Earphone/earbud detected (possible coaching)",
-        "tab_switch": "Browser tab switching (possible external resource use)",
-        "no_face": "Face not visible",
-        "ai_assistance": "Suspected AI-generated response",
-        "voice_change": "Voice change detected",
-        "suspicious_timing": "Long silence before a long answer (see follow-up checks)",
-        "blocked_app": "Blocked app open during the interview",
-        "second_screen": "Extra screen connected",
-        "app_closed": "App closed before submitting",
-        "exit_attempt": "Tried to close the app",
-        "emergency_exit": "Emergency exit used",
-        "lock_expired": "App lock reached its time limit",
-        "browser_mode": "Taken in a browser, without the locked app",
-    }
-
-    for flag_type, count in by_type.items():
-        desc = flag_descriptions.get(flag_type, flag_type.replace("_", " "))
-        lines.append(f"- {desc}: {count} occurrence(s)")
-
-    # Answers that looked looked-up and were tested with a follow-up question
-    from brain.verification_probe import report_lines
-
-    checks = report_lines(state)
-    if checks:
-        lines.append("Follow-up checks (a long silence before a long answer, then a question to test it):")
-        lines += checks
-
-    return "\n".join(lines)
-
-
-def _format_integrity_flags(state: InterviewState) -> str:
-    """Format integrity flags for the analytics report prompt.
-
-    Args:
-        state: Interview state containing cheat flags
-
-    Returns:
-        Formatted string of integrity flags for analytics
-    """
-    cheat_flags = state.get("cheat_flags", [])
-
-    if not cheat_flags:
-        return "No integrity flags recorded."
-
-    lines = [f"Total flags: {len(cheat_flags)}"]
-
-    for flag in cheat_flags[:15]:  # Limit to 15 for prompt
-        lines.append(
-            f"- Turn {flag.get('turn_number', 0)}: "
-            f"{flag.get('flag_type', 'unknown')} "
-            f"({flag.get('severity', 'medium')}, "
-            f"confidence: {flag.get('confidence', 0):.2f})"
-        )
-
-    return "\n".join(lines)
-
-
 # The report prompt gets the whole conversation, up to these limits (characters).
 # A very long interview keeps its opening and as much of the rest as fits.
 MAX_MESSAGE_CHARS = 2_000
@@ -452,15 +343,12 @@ def _build_report_prompt_data(
         "turn_count": state.get("turn_count", 0),
         "topics_covered": ", ".join(state.get("topics_covered", [])) or "None",
         "trust_score": f"{state.get('trust_score', 1.0):.2f}",
-        "integrity_score": f"{state.get('integrity_score', 1.0):.2f}",
         "conversation_summary": conversation_summary,
         "running_scores": scores_str,
         "verification_summary": verification_summary,
         "timestamp_notes": notes_str,
         "interview_completion": _format_completion(state),
         "niche_skills": _format_niche_skills(state),
-        "integrity_concerns": _format_integrity_concerns(state),
-        "integrity_flags": _format_integrity_flags(state),
     }
 
 
@@ -484,7 +372,7 @@ def _format_completion(state: InterviewState) -> str:
         f"- Ended because: {c['end_reason']}" + (" (INCOMPLETE interview)" if c["incomplete"] else ""),
         f"- Length: {c['minutes']} minutes",
         f"- Questions left unanswered: {c['unanswered_questions']}",
-        f"- Times the candidate was away (out of view or disconnected): {c['absences']}",
+        f"- Times the candidate was away (disconnected): {c['absences']}",
     ]
     if c["wrap_up_reason"]:
         lines.append(f"- Wrapped up because: {c['wrap_up_reason'].replace('_', ' ')}")

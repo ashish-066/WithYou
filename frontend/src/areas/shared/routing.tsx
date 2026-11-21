@@ -1,18 +1,13 @@
 /**
- * Who goes where. Two areas:
- *   /app/...       organization workspace (recruiters, org admins)
- *   /platform/...  platform console (platform admins only)
- * A page someone may not use answers "not found", so its existence isn't revealed.
+ * Who goes where: signed-in learners go to /study, everyone else to /login.
  */
-import type { ReactNode } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import type { AuthUser } from '@/types';
 import { buttonClass, Mark } from '@/ui';
 
-export const homeFor = (user: AuthUser) => (user.is_platform_admin ? '/platform' : '/app/interviews');
-
-export const isOrgAdmin = (user: AuthUser | null) => !!user && (user.role === 'admin' || user.is_platform_admin);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const homeFor = (_user: AuthUser) => '/study';
 
 /** Blank page in the workspace colours while the session is checked. */
 export function Blank() {
@@ -25,17 +20,6 @@ export function Home() {
   if (loading) return <Blank />;
   if (!user) return <Navigate to="/login" replace />;
   return <Navigate to={homeFor(user)} replace />;
-}
-
-export function RequireOrgAdmin({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
-  return isOrgAdmin(user) ? <>{children}</> : <NotFoundContent />;
-}
-
-export function RequirePlatformAdmin({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return <Blank />;
-  return user?.is_platform_admin ? <>{children}</> : <NotFound />;
 }
 
 /** "Not found" inside an area layout (the sidebar stays). */
@@ -70,10 +54,4 @@ export function NotFound() {
       </div>
     </div>
   );
-}
-
-/** Old /dashboard links keep working. */
-export function LegacyRedirect({ to }: { to: string }) {
-  const location = useLocation();
-  return <Navigate to={to + location.search} replace />;
 }

@@ -22,13 +22,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 import core.db  # noqa: F401  (configures the database)
-from api.admin_routes import router as admin_router
 from api.auth_routes import router as auth_router
-from api.dsa_routes import router as dsa_router
-from api.elo_routes import router as elo_router
-from api.org_routes import router as org_router
-from api.platform_routes import router as platform_router
-from api.role_routes import router as role_router
 from api.routes import router
 from core.config import settings
 from core.redis import get_redis_client
@@ -82,12 +76,6 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(router)
-app.include_router(admin_router)
-app.include_router(dsa_router)
-app.include_router(elo_router)
-app.include_router(role_router)
-app.include_router(org_router)
-app.include_router(platform_router)
 
 
 @app.get("/health", tags=["Health"])

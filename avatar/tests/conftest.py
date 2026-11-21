@@ -69,16 +69,11 @@ async def client(redis, db, monkeypatch):
     async def create_room(name):
         return None
 
-    async def start_recording(room, session):
-        return ""
-
     async def noop(*a, **k):
         return None
 
     monkeypatch.setattr(livekit_service, "create_room", create_room)
-    monkeypatch.setattr(livekit_service, "start_recording", start_recording)
     monkeypatch.setattr(livekit_service, "delete_room", noop)
-    monkeypatch.setattr(livekit_service, "stop_recording", noop)
     monkeypatch.setattr(
         livekit_service, "generate_participant_token", lambda **k: "lk-token"
     )

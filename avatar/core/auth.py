@@ -1,20 +1,12 @@
 """Authentication and authorization.
 
-Two kinds of callers:
-
-  Recruiters / admins  log in with email + password; an HttpOnly session cookie
-                       carries a signed token. They belong to one organization
-                       and only see that organization's data. Platform admins
-                       additionally see infrastructure (workers, streams, demo).
-
-  Candidates           have no account. A recruiter creates a signed, expiring,
-                       single-use invite link; starting the interview with it
-                       sets a candidate cookie that grants access to that one
-                       interview session only.
+Learners log in with email + password; an HttpOnly session cookie carries a
+signed token. Sign-up creates a personal organization, so each learner only
+sees their own sessions.
 
 Storage is Postgres (tables in the shared alex_db package): organizations,
-users, invites, and interviews (which records the organization that owns each
-interview session).
+users, and interviews (study sessions; records the organization that owns each
+session).
 """
 
 from __future__ import annotations
@@ -29,7 +21,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 import jwt
-from alex_db import Interview, Invite, Organization, session_scope
+from alex_db import Interview, Organization, session_scope
 from alex_db import User as DBUser
 from fastapi import Depends, HTTPException, Request, Response, status
 from sqlalchemy import select, update
@@ -39,7 +31,6 @@ import core.db  # noqa: F401  (configures the database)
 from core.config import settings
 
 USER_COOKIE = "alex_session"
-CANDIDATE_COOKIE = "alex_candidate"
 
 Role = Literal["admin", "recruiter"]
 ROLES: tuple[str, ...] = ("admin", "recruiter")
@@ -121,17 +112,6 @@ def _decode(token: str, kind: str, verify_exp: bool = True) -> dict | None:
     return data if data.get("kind") == kind else None
 
 
-def make_invite_token(invite_id: str, ttl: timedelta) -> str:
-    return _encode({"kind": "invite", "inv": invite_id}, ttl)
-
-
-def read_invite_token(token: str) -> str | None:
-    # Signature is always checked; expiry is checked against the invite record
-    # (invite_is_expired) so an expired link can say "expired", not "invalid"
-    data = _decode(token, "invite", verify_exp=False)
-    return data.get("inv") if data else None
-
-
 def _set_cookie(response: Response, name: str, token: str, ttl: timedelta) -> None:
     response.set_cookie(
         name,
@@ -149,15 +129,8 @@ def set_user_cookie(response: Response, user_id: str) -> None:
     _set_cookie(response, USER_COOKIE, _encode({"kind": "user", "sub": user_id}, ttl), ttl)
 
 
-def set_candidate_cookie(response: Response, session_id: str, org_id: str) -> None:
-    ttl = timedelta(hours=settings.candidate_session_ttl_hours)
-    token = _encode({"kind": "candidate", "sid": session_id, "org": org_id}, ttl)
-    _set_cookie(response, CANDIDATE_COOKIE, token, ttl)
-
-
 def clear_cookies(response: Response) -> None:
-    for name in (USER_COOKIE, CANDIDATE_COOKIE):
-        response.delete_cookie(name, path="/")
+    response.delete_cookie(USER_COOKIE, path="/")
 
 
 # =============================================================================
@@ -187,33 +160,6 @@ def _user_dict(u: DBUser) -> dict:
         "role": u.role,
         "is_platform_admin": u.is_platform_admin,
         "created_at": _iso(u.created_at),
-    }
-
-
-def _invite_dict(i: Invite) -> dict:
-    return {
-        "invite_id": i.id,
-        "org_id": i.org_id,
-        "created_by": i.created_by or "",
-        "candidate_name": i.candidate_name,
-        "candidate_email": i.candidate_email or "",
-        "role_id": i.role_id or "",
-        "role_title": i.role_title or "",
-        "interview_mode": i.interview_mode,
-        "dsa_problem_id": i.dsa_problem_id or "",
-        "require_secure_app": i.require_secure_app,
-        "created_at": _iso(i.created_at),
-        "expires_at": _iso(i.expires_at),
-        "used_session_id": i.used_session_id or "",
-        "revoked_at": _iso(i.revoked_at) if i.revoked_at else "",
-        # What the organization provided (the documents' text stays server-side)
-        "background": {
-            "github_url": i.github_url or "",
-            "linkedin_url": i.linkedin_url or "",
-            "other_links": list(i.other_links or []),
-            "has_resume": bool(i.resume_text),
-            "has_linkedin_export": bool(i.linkedin_text),
-        },
     }
 
 
@@ -327,95 +273,6 @@ class AuthStore:
             )
             return [_user_dict(u) for u in rows]
 
-    # ---- invites ----
-
-    async def create_invite(self, *, org_id: str, created_by: str, ttl: timedelta, **fields) -> tuple[str, str, str]:
-        invite_id = f"inv-{uuid.uuid4().hex[:16]}"
-        expires_at = _now() + ttl
-        async with session_scope() as db:
-            db.add(
-                Invite(
-                    id=invite_id,
-                    org_id=org_id,
-                    created_by=created_by,
-                    expires_at=expires_at,
-                    candidate_name=fields["candidate_name"],
-                    candidate_email=fields.get("candidate_email"),
-                    role_id=fields.get("role_id"),
-                    role_title=fields.get("role_title"),
-                    interview_mode=fields.get("interview_mode") or "round1",
-                    dsa_problem_id=fields.get("dsa_problem_id"),
-                    require_secure_app=bool(fields.get("require_secure_app")),
-                    github_url=fields.get("github_url"),
-                    linkedin_url=fields.get("linkedin_url"),
-                    other_links=fields.get("other_links") or None,
-                    resume_text=fields.get("resume_text"),
-                    linkedin_text=fields.get("linkedin_text"),
-                )
-            )
-        return invite_id, make_invite_token(invite_id, ttl), expires_at.isoformat()
-
-    async def invite_background(self, invite_id: str) -> dict:
-        """Everything the organization gave about the candidate (full text included)."""
-        async with session_scope() as db:
-            i = await db.get(Invite, invite_id)
-        if i is None:
-            return {}
-        return {
-            "github_url": i.github_url,
-            "linkedin_url": i.linkedin_url,
-            "other_links": list(i.other_links or []),
-            "resume_text": i.resume_text,
-            "linkedin_text": i.linkedin_text,
-        }
-
-    async def get_invite(self, invite_id: str) -> dict | None:
-        async with session_scope() as db:
-            invite = await db.get(Invite, invite_id)
-            return _invite_dict(invite) if invite else None
-
-    async def consume_invite(self, invite_id: str, session_id: str) -> bool:
-        """Mark an invite used. True only for the first caller (single use)."""
-        async with session_scope() as db:
-            claimed = await db.scalar(
-                update(Invite)
-                # Not if it was withdrawn meanwhile: claim and withdraw can't both win
-                .where(Invite.id == invite_id, Invite.used_session_id.is_(None), Invite.revoked_at.is_(None))
-                .values(used_session_id=session_id, used_at=_now())
-                .returning(Invite.id)
-            )
-        return claimed is not None
-
-    async def revoke_invite(self, invite_id: str, org_id: str) -> bool:
-        """Withdraw an unused invite. False if it doesn't exist, isn't this org's, or was already used/withdrawn."""
-        async with session_scope() as db:
-            revoked = await db.scalar(
-                update(Invite)
-                .where(
-                    Invite.id == invite_id,
-                    Invite.org_id == org_id,
-                    Invite.used_session_id.is_(None),
-                    Invite.revoked_at.is_(None),
-                )
-                .values(revoked_at=_now())
-                .returning(Invite.id)
-            )
-        return revoked is not None
-
-    async def release_invite(self, invite_id: str) -> None:
-        """Undo consume_invite when the interview failed to start."""
-        async with session_scope() as db:
-            await db.execute(
-                update(Invite).where(Invite.id == invite_id).values(used_session_id=None, used_at=None)
-            )
-
-    async def list_org_invites(self, org_id: str) -> list[dict]:
-        async with session_scope() as db:
-            rows = await db.scalars(
-                select(Invite).where(Invite.org_id == org_id).order_by(Invite.created_at.desc())
-            )
-            return [_invite_dict(i) for i in rows]
-
     # ---- interview session ownership ----
 
     async def create_interview(self, session_id: str, org_id: str | None, **fields) -> None:
@@ -434,13 +291,6 @@ class AuthStore:
                 select(Interview.session_id).where(Interview.org_id == org_id)
             )
             return set(rows)
-
-
-def invite_is_expired(invite: dict) -> bool:
-    try:
-        return datetime.fromisoformat(invite["expires_at"]) <= datetime.now(UTC)
-    except Exception:
-        return True
 
 
 # =============================================================================
@@ -465,12 +315,6 @@ class User:
         return self.is_platform_admin or org_id == self.org_id
 
 
-@dataclass
-class Candidate:
-    session_id: str
-    org_id: str
-
-
 async def optional_user(request: Request) -> User | None:
     token = request.cookies.get(USER_COOKIE)
     data = _decode(token, "user") if token else None
@@ -489,14 +333,6 @@ async def optional_user(request: Request) -> User | None:
     )
 
 
-def optional_candidate(request: Request) -> Candidate | None:
-    token = request.cookies.get(CANDIDATE_COOKIE)
-    data = _decode(token, "candidate") if token else None
-    if not data:
-        return None
-    return Candidate(session_id=data["sid"], org_id=data["org"])
-
-
 _UNAUTHENTICATED = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED, detail="Not signed in"
 )
@@ -506,18 +342,6 @@ async def require_user(user: User | None = Depends(optional_user)) -> User:
     if user is None:
         raise _UNAUTHENTICATED
     return user
-
-
-async def require_signed_in(
-    user: User | None = Depends(optional_user),
-    candidate: Candidate | None = Depends(optional_candidate),
-) -> User | Candidate:
-    """A recruiter or a candidate with an active interview."""
-    if user is not None:
-        return user
-    if candidate is not None:
-        return candidate
-    raise _UNAUTHENTICATED
 
 
 async def require_org_admin(user: User = Depends(require_user)) -> User:
@@ -532,23 +356,8 @@ async def require_platform_admin(user: User = Depends(require_user)) -> User:
     return user
 
 
-async def ensure_session_access(
-    session_id: str, user: User | None, candidate: Candidate | None
-) -> None:
-    """Allow the candidate of this session, or a user of the owning org."""
-    if candidate is not None and candidate.session_id == session_id:
-        return
-    if user is not None:
-        org_id = await AuthStore().session_org(session_id)
-        if user.can_access_org(org_id):
-            return
-        # Same response as "doesn't exist" so other orgs' session ids can't be probed
-        raise HTTPException(status_code=404, detail="Session not found")
-    raise _UNAUTHENTICATED
-
-
 async def ensure_session_user_access(session_id: str, user: User) -> None:
-    """Recruiter-only view of a session (e.g. scores, transcript)."""
+    """Only users of the owning organization may see a session."""
     org_id = await AuthStore().session_org(session_id)
     if not user.can_access_org(org_id):
         raise HTTPException(status_code=404, detail="Session not found")

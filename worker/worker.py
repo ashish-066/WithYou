@@ -17,7 +17,6 @@ from brain.processor import MessageProcessor
 from core import readiness
 from core.config import settings
 from core.redis import check_redis_connection, close_redis_pool, get_redis_client
-from sandbox.executor import ensure_sandbox_image
 from services.metrics import MetricsCollector
 from services.registry import WorkerRegistry
 from services.state_manager import ContextManager
@@ -102,13 +101,6 @@ class BrainWorker:
         else:
             logger.error("Failed to create consumer group after multiple retries.")
             return False
-
-        # Pull the sandbox image now rather than during a candidate's first run
-        if settings.sandbox_mode == "docker" and not await ensure_sandbox_image():
-            logger.error(
-                f"Sandbox image {settings.sandbox_image} is not available; "
-                "code runs will report the sandbox as unavailable"
-            )
 
         # Register this worker
         await self.registry.register()

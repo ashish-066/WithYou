@@ -6,7 +6,6 @@ Handles interview dialogue generation using Gemini Flash for low latency.
 import logging
 from datetime import datetime, timezone
 
-from brain.candidate_background import build_digest
 from brain.models.llm_pool import get_llm_pool
 from brain.models.schemas import ConversationInput, ConversationResponse, FilteredToolOutput
 from brain.state import InterviewState, Message
@@ -145,10 +144,8 @@ async def conversation_tool(
             skill_guidance=skill_guidance,
             user_message=input_data.user_message,
             interviewer_instruction=state.get("interviewer_instruction") or "None",
-            candidate_background=build_digest(
-                state.get("candidate_profile"), state.get("candidate_resume_text")
-            ) or "Not provided.",
-            claim_to_probe=state.get("background_probe") or "None",
+            candidate_background="Not provided.",
+            claim_to_probe="None",
         )
 
         # Generate response (pass user_input for firewall analysis)

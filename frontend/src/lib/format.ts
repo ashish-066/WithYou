@@ -50,4 +50,3 @@ export function percent(value: number | null | undefined): string {
   return value == null ? '—' : `${Math.round(value * 100)}%`;
 }
 
-export const roundLabel = (mode: string | null | undefined) => (mode === 'round2_dsa' ? 'Coding' : 'Technical');

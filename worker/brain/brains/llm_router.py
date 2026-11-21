@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 # Available tools by brain type
-FAST_BRAIN_TOOLS = ["conversation", "tavily_search", "timestamp_noter"]
-SLOW_BRAIN_TOOLS = ["profile_crawler", "report_descriptive", "report_data", "deep_analysis"]
+FAST_BRAIN_TOOLS = ["conversation", "timestamp_noter"]
+SLOW_BRAIN_TOOLS = ["report_descriptive", "report_data", "deep_analysis"]
 
 # Cache for LLM routing decisions (simple in-memory cache)
 _routing_cache: dict[str, tuple[RoutingDecision, float]] = {}
