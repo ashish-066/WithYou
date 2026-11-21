@@ -9,8 +9,7 @@ FULL = dict(
     livekit_api_key="k",
     livekit_api_secret="s",
     bey_api_key="b",
-    deepgram_api_key="d",
-    cartesia_api_key="c",
+    sarvam_api_key="sv",
     auth_secret="x" * 32,
     redis_url="redis://:pw@redis:6379/0",
     database_url="postgresql://u:p@db:5432/alex",
@@ -22,11 +21,11 @@ def test_production_with_all_keys_starts():
 
 
 def test_production_names_missing_keys():
-    with pytest.raises(ValueError, match="LIVEKIT_URL, DEEPGRAM_API_KEY"):
+    with pytest.raises(ValueError, match="LIVEKIT_URL, SARVAM_API_KEY"):
         Settings(
             _env_file=None,
             environment="production",
-            **{**FULL, "livekit_url": "", "deepgram_api_key": ""},
+            **{**FULL, "livekit_url": "", "sarvam_api_key": ""},
         )
 
 

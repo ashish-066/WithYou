@@ -3,14 +3,14 @@
  */
 
 import { useState, useCallback } from 'react';
-import type { CallResponse, InterviewState } from '../types';
+import type { BuddyLanguage, CallResponse, InterviewState } from '../types';
 import { createCall, endCall } from '../services/api';
 
 interface UseInterviewCallReturn {
   state: InterviewState;
   callData: CallResponse | null;
   error: string | null;
-  startCall: (learnerName: string) => Promise<void>;
+  startCall: (learnerName: string, language: BuddyLanguage) => Promise<void>;
   endCurrentCall: () => Promise<void>;
 }
 
@@ -19,11 +19,11 @@ export function useInterviewCall(): UseInterviewCallReturn {
   const [callData, setCallData] = useState<CallResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const startCall = useCallback(async (learnerName: string) => {
+  const startCall = useCallback(async (learnerName: string, language: BuddyLanguage) => {
     setState('connecting');
     setError(null);
     try {
-      const response = await createCall({ candidate_name: learnerName });
+      const response = await createCall({ candidate_name: learnerName, language });
       setCallData(response);
       setState('connected');
     } catch (err) {

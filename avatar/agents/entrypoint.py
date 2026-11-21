@@ -23,6 +23,7 @@ from core.config import settings
 
 # Set API keys in environment - required for LiveKit plugins
 os.environ["DEEPGRAM_API_KEY"] = settings.deepgram_api_key
+os.environ["SARVAM_API_KEY"] = settings.sarvam_api_key
 os.environ["BEY_API_KEY"] = settings.bey_api_key
 os.environ["LIVEKIT_URL"] = settings.livekit_url
 os.environ["LIVEKIT_API_KEY"] = settings.livekit_api_key
@@ -40,10 +41,12 @@ from livekit.agents import (
     cli,
 )
 from livekit.agents.worker import ServerEnvOption
-from livekit.plugins import bey, deepgram, noise_cancellation, silero
+from livekit.plugins import bey, deepgram, noise_cancellation, sarvam, silero
 
+from agents import language as lang
 from agents.interview_monitor import End, InterviewMonitor, Notify, Say
 from core.redis import get_redis_client
+from services import active_calls
 from services.call_finisher import finish_session
 from services.streams import AvatarStreamManager
 
@@ -67,12 +70,44 @@ TURN_HANDLING = {
 }
 
 
-GREETINGS = {
-    "en": (
-        "Hey there! I'm your study buddy. What shall we study today? "
-        "Tell me a topic, or just say hi and we'll figure it out together."
-    ),
-}
+class BuddyVoice:
+    """Speaks each line in the language of its words (agents/language.py).
+
+    Sarvam TTS sends its language with every new synthesis stream, so switching
+    before a line takes effect for that line, pooled connection or not.
+    """
+
+    def __init__(self, tts, language: str):
+        self.tts = tts
+        self.language = language  # language of the last line spoken
+        self.switchable = isinstance(tts, sarvam.TTS)
+
+    def prepare(self, text: str) -> None:
+        target = lang.language_of(text, self.language)
+        if self.switchable and target != self.language:
+            self.tts.update_options(target_language_code=target)
+            logger.info(f"[VOICE] Speaking {target} (was {self.language})")
+        self.language = target
+
+
+def build_speech(language: str):
+    """Speech-to-text and text-to-speech for a session (VOICE_PROVIDER)."""
+    if settings.voice_provider == "deepgram":
+        # English-only fallback (e.g. if Sarvam is down during a demo)
+        return (
+            deepgram.STT(model="nova-2", language="en"),
+            deepgram.TTS(model=settings.deepgram_tts_model),
+        )
+    return (
+        # language="auto": detects Malayalam/Telugu/English per utterance, so the
+        # learner can switch mid-conversation
+        sarvam.STTRealtime(language=settings.stt_language),
+        sarvam.TTS(
+            model=settings.tts_model,
+            target_language_code=language,
+            speaker=settings.tts_speaker,
+        ),
+    )
 
 
 class TurnRelay:
@@ -93,6 +128,8 @@ class TurnRelay:
         # dropped. _next_seq allocates numbers (overlapping sends stay unique).
         self.turn_seq = 0
         self._next_seq = 0
+        # Language of the learner's latest speech (from speech recognition)
+        self.language: str | None = None
 
     async def send(self, text: str) -> None:
         full_text = text.strip()
@@ -112,6 +149,8 @@ class TurnRelay:
                 message_type="candidate_response",
                 extra_fields={
                     "turn_seq": seq,
+                    # The brain answers in the language the learner is speaking
+                    **({"language": self.language} if self.language else {}),
                     # Time from the end of the question to the first word
                     **({"response_latency_ms": latency} if latency is not None else {}),
                 },
@@ -145,6 +184,7 @@ async def listen_for_brain_responses(
     relay: TurnRelay,
     start_id: str | None = None,
     on_interview_ended=None,
+    before_speaking=None,
 ) -> None:
     """Background task that listens for Brain Worker responses.
 
@@ -194,6 +234,8 @@ async def listen_for_brain_responses(
 
             try:
                 # Speak the response through TTS -> Avatar
+                if before_speaking is not None:
+                    before_speaking(message.content)
                 await session.say(
                     message.content,
                     allow_interruptions=True,
@@ -246,6 +288,10 @@ async def entrypoint(ctx: JobContext) -> None:
         session_id, since_ms=room_created_ms or None
     )
 
+    # Starting language: chosen on the start screen (stored with the call)
+    call = await active_calls.get_by_session(session_id)
+    start_language = lang.normalize((call or {}).get("language")) or settings.buddy_language
+
     # Clock rules: silence, dropped connection (agents/interview_monitor.py)
     monitor = InterviewMonitor(now=time.time())
 
@@ -259,20 +305,22 @@ async def entrypoint(ctx: JobContext) -> None:
 
     try:
         # Create agent session with STT, TTS, VAD (NO LLM - Brain Worker handles this)
+        stt, tts = build_speech(start_language)
+        voice = BuddyVoice(tts, start_language)
+        relay.language = start_language
         session = AgentSession(
-            stt=deepgram.STT(
-                model="nova-2",
-                language="en",
-            ),
-            # Deepgram Aura (Cartesia ran out of credits); Sarvam Bulbul in Phase 2
-            tts=deepgram.TTS(model=settings.deepgram_tts_model),
+            stt=stt,
+            tts=tts,
             vad=ctx.proc.userdata["vad"],
             turn_handling=TURN_HANDLING,
         )
 
         def on_user_input_transcribed(ev: agents.voice.UserInputTranscribedEvent) -> None:
             if ev.is_final and ev.transcript and ev.transcript.strip():
-                logger.debug(f"[STT Final] User ({session_id}): {ev.transcript}")
+                spoken = lang.normalize(ev.language)
+                if spoken:
+                    relay.language = spoken
+                logger.info(f"[STT Final] User ({session_id}, {ev.language}): {ev.transcript}")
 
         def on_false_interruption(ev: agents.voice.AgentFalseInterruptionEvent) -> None:
             # Presence was paused by candidate-side sound that turned out not to be speech
@@ -301,8 +349,11 @@ async def entrypoint(ctx: JobContext) -> None:
                     # Our own short nudge; it doesn't restart the question's clock
                     logger.info(f"[MONITOR] {session_id}: saying '{action.key}'")
                     try:
-                        await _record_line(redis, session_id, action.text)
-                        session.say(action.text, allow_interruptions=True)
+                        # In the language we're speaking now
+                        text = lang.nudge(action.key, voice.language) or action.text
+                        await _record_line(redis, session_id, text)
+                        voice.prepare(text)
+                        session.say(text, allow_interruptions=True)
                     except Exception as e:
                         monitor.prompt_failed()
                         logger.warning(f"[MONITOR] Could not speak nudge: {e}")
@@ -370,11 +421,13 @@ async def entrypoint(ctx: JobContext) -> None:
                 relay=relay,
                 start_id=response_start_id,
                 on_interview_ended=lambda reason: _schedule_hang_up(hang_up, monitor),
+                before_speaking=voice.prepare,
             )
         )
 
         # The buddy says hello first (spoken by the agent; the brain answers from then on)
-        greeting = GREETINGS.get(settings.buddy_language, GREETINGS["en"])
+        greeting = lang.greeting(start_language)
+        voice.prepare(greeting)
         logger.info(f"Speaking initial greeting for session {session_id}")
         await session.say(greeting, allow_interruptions=True)
         logger.info(f"Initial greeting complete for session {session_id}")

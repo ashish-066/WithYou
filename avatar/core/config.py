@@ -19,7 +19,7 @@ PRODUCTION_REQUIRED = (
     "livekit_api_key",
     "livekit_api_secret",
     "bey_api_key",
-    "deepgram_api_key",
+    "sarvam_api_key",
 )
 
 
@@ -83,13 +83,18 @@ class Settings(BaseSettings):
     # TTS Configuration (Cartesia via LiveKit Inference)
     cartesia_api_key: str = ""  # unused (out of credits); kept so existing .env files load
     deepgram_tts_model: str = "aura-2-thalia-en"
+    # Speech: "sarvam" (Malayalam/Telugu/English) or "deepgram" (English-only fallback)
+    voice_provider: str = "sarvam"
+    stt_language: str = "auto"  # Sarvam realtime STT: detects the language per utterance
+    tts_model: str = "bulbul:v3"
+    tts_speaker: str = "kavya"
     # Sarvam (Malayalam STT/TTS and the sarvam-105b brain); https://dashboard.sarvam.ai
     sarvam_api_key: str = ""
 
     # Agent Configuration
     agent_name: str = "Study Buddy"
-    # Language the buddy greets and nudges in: "en" or "ml" (Malayalam, Phase 2)
-    buddy_language: str = "en"
+    # Starting language when the call didn't choose one: ml-IN | te-IN | en-IN
+    buddy_language: str = "ml-IN"
     # The voice agent registers under this name and is dispatched explicitly to
     # each call's room, so no other agent on the same LiveKit project takes it
     agent_dispatch_name: str = "padippu-buddy"

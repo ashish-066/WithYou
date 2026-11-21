@@ -11,8 +11,12 @@ export interface CallResponse {
   status: string;
 }
 
+/** Starting language; the learner can switch by speaking another one. */
+export type BuddyLanguage = 'ml-IN' | 'te-IN' | 'en-IN';
+
 export interface CreateCallRequest {
   candidate_name: string;
+  language: BuddyLanguage;
 }
 
 export interface CallStatus {

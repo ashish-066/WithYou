@@ -105,3 +105,20 @@ Ashish doesn't speak Malayalam and wants Telugu too (so he can judge quality him
 - **Also fixed (Phase 1 miss):** the fast-brain system prompt still said "AI interviewer".
 - **Tests:** new `worker/tests/test_languages.py` (15) covers Sarvam first / Gemini on failure / analysis stays Gemini / reasoning off, language follows setup then speech, te/ml intents, native goodbye → confirm → goodbye in that script, and goodbye spoken before the report. Worker **90 passed**, avatar **49 passed**.
 - **Real-brain smoke (Sarvam):** Telugu explain → quiz → half-answer coaching ("అవును, కరెక్ట్! … కానీ…") → switch to Malayalam on request. Each Sarvam answer took 0.7–1.3 s.
+- (Correction: avatar had 48 tests at part A, not 49.)
+
+## Phase 2, part B: voice agent + picker ✅ (automated); manual test pending
+- **Voice agent on Sarvam** (`livekit-plugins-sarvam==1.8.10`, the official plugin; no custom adapter):
+  - STT `STTRealtime(language="auto")`, i.e. `saaras:v3-realtime`, detects ml/te/en per utterance
+  - TTS `sarvam.TTS("bulbul:v3", speaker="kavya")`
+  - settings: `VOICE_PROVIDER` (`sarvam` | `deepgram` = English-only fallback for demo-proofing), `STT_LANGUAGE`, `TTS_MODEL`, `TTS_SPEAKER`, `BUDDY_LANGUAGE` (default `ml-IN`)
+  - Production now requires `SARVAM_API_KEY` instead of the Deepgram key
+- **Language switching:** `agents/language.py` (pure, tested).
+  - Each final transcript's language → `TurnRelay.language` → sent with the turn (additive `language` field) → the brain replies in it.
+  - Before every line (greeting, brain replies, silence nudge), `BuddyVoice.prepare()` picks the TTS language from the line's **script** (Telugu/Malayalam Unicode blocks, else English) and calls `update_options` only when it changes. Verified in plugin source: Sarvam sends the language in a per-stream config, so it applies to the next line even on a pooled socket.
+- **Greetings and the "no rush" nudge** in Malayalam, Telugu and English; the starting language comes from the call (`active_calls`). **Ashish: please check the Telugu lines.**
+- **Frontend:** start screen has a മലയാളം / తెలుగు / English picker (remembered in localStorage) → `POST /calls/ {language}`.
+- **Environment bug found and fixed:** both `.venv`s were copied from `~/nlp/Alex`, so `pytest`/`alembic`/etc. scripts had shebangs pointing at **that** project's interpreter. Every `uv run pytest` before now ran on `~/nlp/Alex`'s installed packages (with this repo's code), and only the new Sarvam plugin exposed it. The services were unaffected (`uv run python …` uses this venv). Fixed with `uv sync --reinstall` in both, plus a path fix in the `activate*` scripts. Both suites re-run on the correct venvs: green.
+- **Tests:** new `avatar/tests/test_language.py` (5): script → language, code normalisation, greeting/nudge per language, turns carry the language, voice switches only on change. **avatar 53 passed, worker 90 passed**, frontend builds.
+- **Real agent test** (isolated dispatch name `padippu-test`; Ashish's agent was also registered): job received → Bey 402 → voice-only → Sarvam TTS WebSocket connected (bulbul:v3/kavya) → Malayalam greeting synthesized → realtime STT `session.begin` (saaras:v3-realtime). **0 errors.**
+- **[ASK ASHISH] pending:** the big voice test, in Telugu (and Malayalam), plus a language switch mid-session.
