@@ -48,3 +48,11 @@ Running log of the Presence View → Padippu Koottukaran reshape. Newest entries
 - frontend: `tsc` + `vite build` OK
 - Boot smoke: worker, API and LiveKit agent all start cleanly (agent registered in LiveKit Cloud, India South)
 - **[ASK ASHISH] pending:** English voice loop end-to-end ("the skeleton still talks").
+
+## Spikes (2026-11-21)
+- **Key:** `SARVAM_API_KEY` is set in `avatar/.env` and `worker/.env`, and both services' settings load it.
+- **P-0 TTS (Bulbul v3, ml-IN, speaker `shubh`):** HTTP 200 in 2.24 s via REST `POST /text-to-speech`. The response is `{request_id, audios: [base64 wav]}`. Saved to `spikes/out/p0_bulbul_v3_ml_shubh.wav`. **[ASK ASHISH] listen for quality → go/no-go.**
+- **LLM (sarvam-105b):** HTTP 200 in 2.10 s via `POST /v2/chat/completions` (OpenAI-compatible; we sent both the `api-subscription-key` and `Authorization: Bearer` headers). Correct, natural Malayalam two-sentence answer. Notes for Phase 2:
+  - the model returns a separate `reasoning_content` field, and `content` starts with `\n`, so strip it
+  - reasoning adds latency, so try a low `reasoning_effort` for the fast path
+- **P-1 STT:** not run yet (needs a Malayalam clip from Ashish).
