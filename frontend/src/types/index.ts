@@ -14,9 +14,13 @@ export interface CallResponse {
 /** Starting language; the learner can switch by speaking another one. */
 export type BuddyLanguage = 'ml-IN' | 'te-IN' | 'en-IN';
 
+/** Study (teach + gentle checks) or just talk (a warm listener). */
+export type SessionMode = 'study' | 'talk';
+
 export interface CreateCallRequest {
   candidate_name: string;
   language: BuddyLanguage;
+  mode: SessionMode;
 }
 
 export interface CallStatus {

@@ -248,7 +248,7 @@ class ContextManager:
         }
         int_fields = {"turn_count", "max_turns", "report_attempts"}
         float_fields = {"trust_score"}
-        bool_fields = {"interview_ended", "answering_check"}
+        bool_fields = {"interview_ended", "answering_check", "crisis_flagged"}
 
         for key, value in data.items():
             # Handle bytes from Redis

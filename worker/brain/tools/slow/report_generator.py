@@ -54,6 +54,31 @@ Respond with JSON only:
   "next_time": "one gentle suggestion for next time"
 }}"""
 
+TALK_RECAP_PROMPT = """You are a warm buddy writing a short, kind note to someone you just had a heart-to-heart
+talk with (not a study session). Write it to them ("you"), in simple, friendly {language}{script_note}.
+
+The conversation (Learner = them, Buddy = you):
+{conversation_summary}
+
+Rules:
+- Gentle and validating. Thank them for sharing. Don't repeat private details back.
+- No advice lists, no diagnosis, no judging. One small, kind self-care idea at most.
+
+Respond with JSON only:
+{{
+  "title": "a short warm title",
+  "summary": "two warm sentences for them",
+  "covered": ["what we talked about, in a few gentle words"],
+  "improved": [],
+  "next_time": "one small, kind idea for looking after themselves"
+}}"""
+
+HELPLINE = {
+    "en-IN": "If things ever feel too heavy, please talk to someone you trust, or call Tele-MANAS on 14416 (free, any time). In an emergency, call 112.",
+    "te-IN": "ఎప్పుడైనా చాలా భారంగా అనిపిస్తే, నువ్వు నమ్మే ఎవరితోనైనా మాట్లాడు, లేదా Tele-MANAS కి 14416 కి కాల్ చేయి (ఉచితం, ఎప్పుడైనా). అత్యవసరమైతే 112 కి కాల్ చేయి.",
+    "ml-IN": "എപ്പോഴെങ്കിലും വല്ലാതെ ഭാരം തോന്നിയാൽ, നീ വിശ്വസിക്കുന്ന ആരോടെങ്കിലും സംസാരിക്കൂ, അല്ലെങ്കിൽ Tele-MANAS ൽ 14416 ലേക്ക് വിളിക്കൂ (സൗജന്യം, എപ്പോഴും). അടിയന്തര സാഹചര്യത്തിൽ 112 ൽ വിളിക്കൂ.",
+}
+
 # Plain recap when no model is available (from the understanding map)
 FALLBACK = {
     "en-IN": {
@@ -91,7 +116,8 @@ async def generate_descriptive_report(state: InterviewState, input_data: Any = N
         pool = await get_llm_pool()
         data = _build_report_prompt_data(state, await _load_full_transcript(state))
         name = LANGUAGE_NAMES.get(language, "English")
-        prompt = RECAP_PROMPT.format(
+        template = TALK_RECAP_PROMPT if state.get("session_mode") == "talk" else RECAP_PROMPT
+        prompt = template.format(
             language=name,
             script_note="" if name == "English" else f", in {name} script",
             understanding=_format_understanding(state),
@@ -103,6 +129,13 @@ async def generate_descriptive_report(state: InterviewState, input_data: Any = N
         logger.warning(f"Recap: no model answered ({e}); using the plain recap")
         recap, source = fallback_recap(state), "fallback"
     recap["language"] = language
+    recap["mode"] = state.get("session_mode") or "study"
+    if recap["mode"] == "talk":
+        # Private: what they shared never goes on the card (the model may repeat it)
+        recap["covered"], recap["improved"] = [], []
+    if state.get("crisis_flagged"):
+        # Always, word for word (not left to the model)
+        recap["help"] = HELPLINE.get(language, HELPLINE["en-IN"])
     return FilteredToolOutput(
         success=True,
         data=recap,

@@ -11,7 +11,7 @@ from typing import Any
 
 from redis.asyncio import Redis
 
-from brain import interview_flow, understanding
+from brain import interview_flow, talk, understanding
 from brain.brains.router import run_prefilter
 from brain.graph import create_interview_graph
 from brain.language_switch import requested_language
@@ -122,6 +122,8 @@ class MessageProcessor:
                 raw_data = message.raw_data
                 if raw_data.get("language") in SUPPORTED_LANGUAGES:
                     state["language"] = raw_data["language"]
+                if raw_data.get("mode") in talk.MODES:
+                    state["session_mode"] = raw_data["mode"]
                 if not raw_data.get("job_description"):
                     # Setup only: nothing to say (the voice agent greets)
                     await self.context_manager.update_context(session_id, state)
@@ -206,7 +208,12 @@ class MessageProcessor:
             # buddy's check question, and does a vague one get a follow-up?
             state["answering_check"] = False
             state["check_target"] = ""
-            if message.message_type == "candidate_response" and not (decision and decision.instruction):
+            talking = talk.is_talk(state)  # "Just talk" mode: no study bookkeeping
+            if talking and decision is not None:
+                key = next((k for k, v in interview_flow.INSTRUCTIONS.items() if v == decision.instruction), None)
+                if key in talk.TALK_INSTRUCTIONS:
+                    decision.instruction = talk.TALK_INSTRUCTIONS[key]
+            if message.message_type == "candidate_response" and not talking and not (decision and decision.instruction):
                 intent = run_prefilter({**state, "current_input": message.content})
                 if understanding.answering_a_check(state) and understanding.is_answer(
                     intent.classification, intent.confidence
@@ -217,6 +224,17 @@ class MessageProcessor:
                         decision.instruction = follow_up
                 target = understanding.next_point(state)
                 state["check_target"] = target["id"] if target else ""
+            # Safety first, in every mode: talk of self-harm gets a caring, serious
+            # reply that points to real help (brain/talk.py), overriding anything else
+            if message.message_type == "candidate_response" and talk.in_crisis(message.content):
+                logger.warning(f"Crisis language in session {session_id}: replying with safety guidance")
+                if decision is None:
+                    decision = interview_flow.Decision("continue", "", None, state.get("flow") or {})
+                decision.instruction = talk.CRISIS_INSTRUCTION
+                state["crisis_flagged"] = True  # the end card repeats the helpline
+                if decision.action == "conclude":
+                    decision.action, decision.end_reason = "continue", None
+                state["answering_check"] = False
             if decision is not None:
                 state["flow"] = decision.flow
                 state["interviewer_instruction"] = decision.instruction

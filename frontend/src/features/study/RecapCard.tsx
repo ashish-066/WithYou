@@ -80,6 +80,12 @@ export function RecapCard({ sessionId, language }: { sessionId: string; language
           </ul>
         </>
       )}
+      {recap.help && (
+        <div role="note" className="mt-4 rounded-ui border border-accent bg-accent/10 p-3">
+          <h3 className="text-meta text-ink">{t.helpTitle}</h3>
+          <p className="mt-1 text-body text-ink">{recap.help}</p>
+        </div>
+      )}
       {recap.next_time && (
         <>
           <h3 className="mt-4 text-meta text-muted">{t.recapNext}</h3>

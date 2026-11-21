@@ -7,7 +7,7 @@ fast model so it can be published before any understanding-tracking runs.
 import logging
 from datetime import datetime, timezone
 
-from brain import understanding
+from brain import talk, understanding
 from brain.models.llm_pool import get_llm_pool
 from brain.models.schemas import ConversationInput, ConversationResponse, FilteredToolOutput
 from brain.state import InterviewState, Message
@@ -209,8 +209,9 @@ async def conversation_tool(
         target = understanding.point_text(state, state.get("check_target")) or understanding.check_guidance(state)
         skill_guidance = target or "Nothing specific yet."
 
-        # Build prompt
-        prompt = CONVERSATION_PROMPT.format(
+        # Build prompt ("Just talk" mode has its own listener persona, brain/talk.py)
+        template = talk.TALK_PROMPT if talk.is_talk(state) else CONVERSATION_PROMPT
+        prompt = template.format(
             current_topic=input_data.current_topic,
             interview_phase=input_data.interview_phase,
             turn_count=state.get("turn_count", 0),

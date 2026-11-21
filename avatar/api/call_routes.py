@@ -72,6 +72,7 @@ async def create_call(request: CreateCallRequest, user: User = Depends(require_u
             "org_id": user.org_id,
             "user_id": user.user_id,
             "language": request.language,
+            "mode": request.mode,
             "livekit_url": settings.livekit_url,
             "created_at": datetime.now(UTC).isoformat(),
             "status": "created",
@@ -83,7 +84,7 @@ async def create_call(request: CreateCallRequest, user: User = Depends(require_u
                 session_id=session_id,
                 content="",
                 message_type="system_init",
-                extra_fields={"language": request.language},
+                extra_fields={"language": request.language, "mode": request.mode},
             )
         finally:
             await redis.aclose()

@@ -57,7 +57,10 @@ async def test_call_records_the_language_and_tells_the_brain(client, redis):
 
     assert (await active_calls.get(call["call_id"]))["language"] == "te-IN"
     inits = [d for _, d in await redis.xrange("interview:requests") if d["message_type"] == "system_init"]
-    assert [(d["session_id"], d["language"]) for d in inits] == [(call["session_id"], "te-IN")]
+    assert [(d["session_id"], d["language"], d["mode"]) for d in inits] == [(call["session_id"], "te-IN", "study")]
+    talk_call = (await client.post("/calls/", json={"language": "ml-IN", "mode": "talk"})).json()
+    assert (await active_calls.get(talk_call["call_id"]))["mode"] == "talk"
+    assert (await client.post("/calls/", json={"mode": "therapy"})).status_code == 422
     # Unsupported languages are refused
     assert (await client.post("/calls/", json={"language": "fr-FR"})).status_code == 422
 

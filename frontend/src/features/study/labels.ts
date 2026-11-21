@@ -42,6 +42,14 @@ type Labels = {
   recapCovered: string;
   recapImproved: string;
   recapNext: string;
+  modeLabel: string;
+  studyMode: string;
+  studyModeHint: string;
+  talkMode: string;
+  talkModeHint: string;
+  startTalk: string;
+  talking: string;
+  helpTitle: string;
 };
 
 const en: Labels = {
@@ -76,6 +84,14 @@ const en: Labels = {
   recapCovered: 'What we studied',
   recapImproved: 'Where you got sharper',
   recapNext: 'Next time',
+  modeLabel: 'What do you feel like?',
+  studyMode: 'Study',
+  studyModeHint: 'Learn a topic, with gentle questions',
+  talkMode: 'Just talk',
+  talkModeHint: 'Stressed or bored? Talk about anything',
+  startTalk: 'Start talking',
+  talking: 'Just talking',
+  helpTitle: 'If you need help',
 };
 
 const te: Labels = {
@@ -109,6 +125,14 @@ const te: Labels = {
   recapCovered: 'ఈ రోజు మనం నేర్చుకున్నది',
   recapImproved: 'నువ్వు మెరుగైనది',
   recapNext: 'తర్వాతసారి',
+  modeLabel: 'ఇప్పుడు ఏం చేద్దాం?',
+  studyMode: 'చదువుదాం',
+  studyModeHint: 'ఒక టాపిక్ నేర్చుకో, చిన్న ప్రశ్నలతో',
+  talkMode: 'ఊరికే మాట్లాడదాం',
+  talkModeHint: 'స్ట్రెస్ గా ఉందా? ఏదైనా మాట్లాడు',
+  startTalk: 'మాట్లాడటం మొదలుపెట్టు',
+  talking: 'మాట్లాడుకుంటున్నాం',
+  helpTitle: 'సహాయం కావాలంటే',
 };
 
 const ml: Labels = {
@@ -142,6 +166,14 @@ const ml: Labels = {
   recapCovered: 'ഇന്ന് നമ്മൾ പഠിച്ചത്',
   recapImproved: 'നീ മെച്ചപ്പെട്ടത്',
   recapNext: 'അടുത്ത തവണ',
+  modeLabel: 'ഇപ്പോ എന്താ വേണ്ടത്?',
+  studyMode: 'പഠിക്കാം',
+  studyModeHint: 'ഒരു വിഷയം പഠിക്കാം, ചെറിയ ചോദ്യങ്ങളോടെ',
+  talkMode: 'വെറുതെ സംസാരിക്കാം',
+  talkModeHint: 'ടെൻഷനാണോ? എന്തും സംസാരിക്കാം',
+  startTalk: 'സംസാരിക്കാൻ തുടങ്ങാം',
+  talking: 'സംസാരിക്കുന്നു',
+  helpTitle: 'സഹായം വേണമെങ്കിൽ',
 };
 
 const ALL: Record<BuddyLanguage, Labels> = { 'en-IN': en, 'te-IN': te, 'ml-IN': ml };
@@ -151,6 +183,23 @@ export function labels(language: BuddyLanguage): Labels {
 }
 
 const LANGUAGE_KEY = 'buddy-language';
+const MODE_KEY = 'buddy-mode';
+
+export function savedMode(): 'study' | 'talk' {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'talk' ? 'talk' : 'study';
+  } catch {
+    return 'study';
+  }
+}
+
+export function saveMode(mode: 'study' | 'talk'): void {
+  try {
+    localStorage.setItem(MODE_KEY, mode);
+  } catch {
+    /* ignore */
+  }
+}
 
 export function savedLanguage(): BuddyLanguage {
   try {

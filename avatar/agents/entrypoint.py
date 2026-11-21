@@ -483,7 +483,7 @@ async def entrypoint(ctx: JobContext) -> None:
         )
 
         # The buddy says hello first (spoken by the agent; the brain answers from then on)
-        greeting = lang.greeting(start_language)
+        greeting = lang.greeting(start_language, (call or {}).get("mode"))
         voice.prepare(greeting)
         logger.info(f"Speaking initial greeting for session {session_id}")
         await session.say(greeting, allow_interruptions=settings.allow_interruptions)

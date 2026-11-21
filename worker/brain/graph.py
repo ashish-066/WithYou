@@ -96,6 +96,10 @@ async def conclude_interview_node(state: InterviewState) -> dict[str, Any]:
     # the report is written, so the learner isn't left waiting on it.
     end_reason = state.get("end_reason") or "completed"
     response = closing_message(end_reason, state.get("language"))
+    if state.get("session_mode") == "talk" and end_reason in ("completed", "candidate_ended", "user_ended", "time_limit", "turn_limit"):
+        from brain.talk import TALK_GOODBYES
+
+        response = TALK_GOODBYES.get(str(state.get("language")), TALK_GOODBYES["en-IN"])
     await publish_reply_early(response)
 
     report_status: Literal["not_started", "pending", "in_progress", "completed", "failed"] = "in_progress"
@@ -168,7 +172,7 @@ async def update_understanding(state: InterviewState) -> dict[str, Any]:
     """
     from brain import understanding as u_mod
 
-    if str(state.get("current_input") or "").startswith("["):
+    if str(state.get("current_input") or "").startswith("[") or state.get("session_mode") == "talk":
         return {}
     u = dict(state.get("understanding") or {})
     topic = str(state.get("current_topic") or "")

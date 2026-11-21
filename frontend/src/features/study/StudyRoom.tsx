@@ -22,7 +22,7 @@ import { Track, type AudioCaptureOptions } from 'livekit-client';
 import { Check, Mic, MicOff, PhoneOff } from 'lucide-react';
 
 import { getProgress, type Progress } from '@/services/api';
-import type { BuddyLanguage } from '@/types';
+import type { BuddyLanguage, SessionMode } from '@/types';
 import { cx } from '@/ui/cx';
 import { LANGUAGES, labels, saveLanguage } from './labels';
 
@@ -45,10 +45,11 @@ interface StudyRoomProps {
   token: string;
   callId: string;
   language: BuddyLanguage;
+  mode: SessionMode;
   onEnd: () => void;
 }
 
-export function StudyRoom({ serverUrl, token, callId, language, onEnd }: StudyRoomProps) {
+export function StudyRoom({ serverUrl, token, callId, language, mode, onEnd }: StudyRoomProps) {
   return (
     <LiveKitRoom
       serverUrl={serverUrl}
@@ -60,13 +61,24 @@ export function StudyRoom({ serverUrl, token, callId, language, onEnd }: StudyRo
       data-area="app"
       className="flex h-[100dvh] flex-col bg-canvas text-ink"
     >
-      <Session callId={callId} startLanguage={language} onEnd={onEnd} />
+      <Session callId={callId} startLanguage={language} mode={mode} onEnd={onEnd} />
       <RoomAudioRenderer />
     </LiveKitRoom>
   );
 }
 
-function Session({ callId, startLanguage, onEnd }: { callId: string; startLanguage: BuddyLanguage; onEnd: () => void }) {
+function Session({
+  callId,
+  startLanguage,
+  mode,
+  onEnd,
+}: {
+  callId: string;
+  startLanguage: BuddyLanguage;
+  mode: SessionMode;
+  onEnd: () => void;
+}) {
+  const talking = mode === 'talk';
   const [language, setLanguage] = useState<BuddyLanguage>(startLanguage);
   const t = labels(language);
   const progress = useProgress(callId);
@@ -119,14 +131,22 @@ function Session({ callId, startLanguage, onEnd }: { callId: string; startLangua
         <VideoTrack trackRef={avatar} className="absolute inset-0 h-full w-full object-cover" />
         <header className="relative z-10 flex items-start justify-between gap-3 px-4 pb-2 pt-[max(12px,env(safe-area-inset-top))]">
           <div className="min-w-0 rounded-ui bg-ink/55 px-3 py-1.5 text-canvas">
-            <p className="text-meta opacity-80">{t.topic}</p>
-            <p className="truncate font-display text-lead">{progress?.topic || t.noTopic}</p>
+            {talking ? (
+              <p className="font-display text-lead">{t.talking}</p>
+            ) : (
+              <>
+                <p className="text-meta opacity-80">{t.topic}</p>
+                <p className="truncate font-display text-lead">{progress?.topic || t.noTopic}</p>
+              </>
+            )}
           </div>
           {endButton(true)}
         </header>
-        <div className="relative z-10">
-          <Covered progress={progress} language={language} onVideo />
-        </div>
+        {!talking && (
+          <div className="relative z-10">
+            <Covered progress={progress} language={language} onVideo />
+          </div>
+        )}
         <div className="flex-1" />
         <div className="relative z-10 px-4 pb-3">
           <Captions language={language} />
@@ -143,13 +163,19 @@ function Session({ callId, startLanguage, onEnd }: { callId: string; startLangua
     <>
       <header className="flex items-start justify-between gap-3 px-4 pb-2 pt-[max(12px,env(safe-area-inset-top))]">
         <div className="min-w-0">
-          <p className="text-meta text-muted">{t.topic}</p>
-          <p className="truncate font-display text-h3">{progress?.topic || t.noTopic}</p>
+          {talking ? (
+            <p className="font-display text-h3">{t.talking}</p>
+          ) : (
+            <>
+              <p className="text-meta text-muted">{t.topic}</p>
+              <p className="truncate font-display text-h3">{progress?.topic || t.noTopic}</p>
+            </>
+          )}
         </div>
         {endButton(false)}
       </header>
 
-      <Covered progress={progress} language={language} />
+      {!talking && <Covered progress={progress} language={language} />}
 
       <main className="flex min-h-0 flex-1 flex-col items-center px-4">
         <Buddy language={language} />

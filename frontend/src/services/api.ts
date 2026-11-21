@@ -81,6 +81,9 @@ export interface Recap {
   improved: string[];
   next_time: string;
   language?: string;
+  mode?: 'study' | 'talk';
+  /** Helpline text, shown when self-harm came up in the session */
+  help?: string;
 }
 
 /** The end-of-session recap card ("pending" while the buddy is still writing it). */

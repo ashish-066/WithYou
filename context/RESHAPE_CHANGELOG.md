@@ -239,3 +239,15 @@ Ashish: "the UI looks good but it doesn't give the same humanish feeling". Two c
 - **Cause:** LiveKit project `aa-v5cciyrx` (the key Ashish switched to) has the **old Presence View interviewer deployed** somewhere (not on this laptop). It joins **every** new room automatically, with a BeyondPresence avatar named "Presence". Proven: in a room where our agent was *not* dispatched, `agent-AJ_…` + `bey-avatar` ("Presence") joined within 4 s.
 - **Fix (Ashish):** a new LiveKit project, `withyou-vbwmh652`. Verified: no uninvited agent in 16 s; our agent is dispatched → avatar started → greeting complete.
 - Our agent only ever joins by explicit dispatch (`padippu-buddy`), so it can't cause this itself. **Lesson for the demo:** use a LiveKit project with nothing else deployed on it.
+
+## "Just talk" mode: the emotional buddy (2026-11-22, Ashish's request, beyond BUILD_PLAN)
+- **Start screen:** choose **Study** (as before) or **Just talk** (ఊరికే మాట్లాడదాం / വെറുതെ സംസാരിക്കാം), plus the language. `POST /calls/ {mode}` → stored on the call → `system_init {mode}` → `state["session_mode"]`.
+- **Talk mode** (`worker/brain/talk.py`):
+  - its own listener persona: reflect feelings, one gentle open question, short; no toxic positivity, no diagnosis ("a buddy, not a therapist"); practical ideas only if wanted; studying only if asked
+  - no understanding map, coaching or quiz bookkeeping
+  - talk-mode wording for wrap-up / silence / goodbye; its own greeting in ml/te/en (agent)
+  - the room hides topic and idea chips
+  - the end card is a gentle note; **what was shared is never put on the card** (covered/improved cleared in code, since the model repeated private details)
+- **Crisis safety in both modes:** self-harm / wanting-to-die language (English, Telugu, Malayalam) is detected **in code**. The next reply gets a one-turn instruction: calm, serious, thank them for telling, ask if they're safe, talk to someone trusted, **Tele-MANAS 14416**, **112** in danger, "a buddy, not a counsellor". It's never cheerful and never ends the session, even if phrased as a goodbye. The end card then always shows the helpline text word for word (`help`). Everyday phrases ("this exam is killing me", "I could die laughing") don't trigger it.
+- **Real brain (Telugu, talk mode):** exam stress → validating + gentle question; fear of mom scolding → empathy, no study push; "కొన్నిసార్లు నాకు చనిపోవాలని అనిపిస్తుంది" → "నువ్వు ఇప్పుడు safe గా ఉన్నావా? … buddy ని మాత్రమే, counsellor ని కాదు … 14416 … 112". The opening ("I'm happy you told me") was fixed to "thank you for telling me".
+- **Tests:** new `worker/tests/test_talk.py` (19): crisis phrases en/te/ml, everyday non-crisis phrases, safety reply in study mode that doesn't end the session, talk mode skips study bookkeeping, listener prompt, talk goodbye + private card + helpline. **Worker 133, avatar 58**; frontend builds.

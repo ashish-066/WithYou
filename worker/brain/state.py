@@ -301,6 +301,10 @@ class InterviewState(TypedDict, total=False):
     current_topic: str
     # Language the buddy speaks now: ml-IN | te-IN | en-IN (follows the learner)
     language: str
+    # "study" (default) or "talk" (Just talk: emotional buddy, brain/talk.py)
+    session_mode: str
+    # Self-harm language came up this session (brain/talk.py): the end card shows the helpline
+    crisis_flagged: bool
     # Understanding map of the current topic (brain/understanding.py)
     understanding: dict[str, Any]
     # This turn answers the buddy's check question (coach it, assess it after the reply)

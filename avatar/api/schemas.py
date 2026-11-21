@@ -12,6 +12,8 @@ class CreateCallRequest(BaseModel):
     language: Literal["ml-IN", "te-IN", "en-IN"] = Field(
         default="ml-IN", description="Language the buddy starts in"
     )
+    # "study" (teach + gentle checks) or "talk" (just talk: a warm listener)
+    mode: Literal["study", "talk"] = Field(default="study", description="Kind of session")
 
     candidate_name: str = Field(
         default="Learner",

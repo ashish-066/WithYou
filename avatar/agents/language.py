@@ -32,6 +32,13 @@ GREETINGS = {
     ),
 }
 
+# "Just talk" mode: the buddy as a listener
+TALK_GREETINGS = {
+    "ml-IN": "ഹായ്! ഞാൻ ഇവിടെ ഉണ്ട്. ഇന്ന് എങ്ങനെയുണ്ട്? എന്തും പറയാം, ഞാൻ കേൾക്കാം.",
+    "te-IN": "హాయ్! నేను ఇక్కడే ఉన్నాను. ఈ రోజు ఎలా ఉంది? ఏదైనా చెప్పు, నేను వింటాను.",
+    "en-IN": "Hey, I'm here. How's your day going? Tell me anything, I'm listening.",
+}
+
 # Short lines the agent says itself (agents/interview_monitor.py keys)
 NUDGES = {
     "repeat_offer": {
@@ -78,8 +85,9 @@ def language_of(text: str, default: str = "en-IN") -> str:
     return "en-IN" if any(ch.isalpha() for ch in text) else default
 
 
-def greeting(language: str | None) -> str:
-    return GREETINGS.get(language or "", GREETINGS["ml-IN"])
+def greeting(language: str | None, mode: str | None = None) -> str:
+    lines = TALK_GREETINGS if mode == "talk" else GREETINGS
+    return lines.get(language or "", lines["ml-IN"])
 
 
 def nudge(key: str, language: str | None) -> str:
