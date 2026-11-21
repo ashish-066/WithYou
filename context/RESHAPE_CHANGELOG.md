@@ -65,3 +65,4 @@ Ashish heard nothing. What I found:
 - **Also:** the agent now registers as `padippu-buddy` (`AGENT_DISPATCH_NAME`) and the API dispatches it explicitly to each room (`livekit_service.dispatch_agent`). Another agent on the same LiveKit project can no longer take our calls. Verified against LiveKit Cloud: dispatch → "received job" → "Starting interview agent".
 - Tests: avatar 47 passed (+1 dispatch test), worker 59 passed.
 - **Decision (Ashish):** TTS → **Deepgram Aura** (`aura-2-thalia-en`, `DEEPGRAM_TTS_MODEL`) for Phase 0/1. Cartesia is removed from the agent (still out of credits). The avatar stays voice-only automatically while Bey is out of credits. Real dispatch test: Deepgram TTS connected, audio frames flowing, 0 errors.
+- **[ASK ASHISH] Phase 0 manual test: PASSED (2026-11-21).** English voice loop end-to-end: greeting, reply to speech, end call. **Phase 0 exit checkpoint met.**
