@@ -57,3 +57,11 @@ async def test_failure_shows_the_original_and_success_is_cached(redis, monkeypat
     if core_redis._pool is not None:
         await core_redis._pool.aclose()
     monkeypatch.setattr(core_redis, "_pool", None)
+
+
+def test_looks_broken_catches_model_chatter():
+    from services.translate import looks_broken
+
+    assert looks_broken("ప్రకాశసంశ్లేషణ", "The translation of the input text is: Photosynthesis")
+    assert looks_broken("నీటి చక్రం", "x" * 200)
+    assert not looks_broken("నీటి చక్రం", "Water cycle")

@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { LANGUAGES } from '@/features/study/labels';
 import { cx } from '@/ui/cx';
 import { useStats } from './data';
-import { sessionUrl } from './HomePage';
+import { Garden } from './Garden';
 import { Scribble } from './notebook';
 import { usePrefs, type Voice } from './prefs';
 import { strings } from './strings';
@@ -14,7 +14,6 @@ import { strings } from './strings';
 export function ProgressPage() {
   const { language } = usePrefs();
   const t = strings(language);
-  const navigate = useNavigate();
   const { data, isLoading } = useStats();
 
   return (
@@ -93,42 +92,15 @@ export function ProgressPage() {
           {/* Learning level per topic */}
           <section aria-labelledby="topics-title">
             <h2 id="topics-title" className="font-display text-h3 font-bold">
-              {t.learningTitle}
+              {t.gardenTitle}
             </h2>
-            <p className="mt-1 text-meta text-muted">{t.conceptsHelp}</p>
+            <p className="mt-1 text-meta text-muted">{t.gardenHelp}</p>
             {data.topics.length === 0 ? (
               <p className="mt-3 sketch-soft border-dashed p-5 text-body text-muted">
                 {t.progressEmpty}
               </p>
             ) : (
-              <ul className="mt-3 space-y-2">
-                {data.topics.map((tp) => {
-                  const pct = tp.ideas_total ? (100 * tp.ideas_understood) / tp.ideas_total : 0;
-                  return (
-                    <li key={tp.topic}>
-                      <button
-                        onClick={() => navigate(sessionUrl('study', tp.topic))}
-                        className="w-full sketch-soft bg-surface px-4 py-3 text-left"
-                      >
-                        <span className="flex items-center justify-between gap-3">
-                          <span className="truncate text-lead text-ink">{tp.topic}</span>
-                          {tp.level && <LevelBadge level={tp.level} label={t.levels[tp.level]} />}
-                        </span>
-                        {tp.ideas_total > 0 && (
-                          <>
-                            <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-sunken">
-                              <span className="block h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
-                            </span>
-                            <span className="mt-1 block text-meta text-muted">
-                              {t.ideasOf(tp.ideas_understood, tp.ideas_total)}
-                            </span>
-                          </>
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+              <Garden topics={data.topics} ideasOf={t.ideasOf} levels={t.levels} />
             )}
           </section>
         </>

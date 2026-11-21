@@ -341,3 +341,7 @@ Next:
 - `style: learn|teach` goes from `POST /calls/` → saved call (agent greeting: "Today you're the teacher…", in ml/te/en) → `system_init` → worker `study_style`.
 - Worker: reply mode "student"; the role swap goes in the prompt's `<system_instruction>` slot (it lost to the "explain" rule when it sat in session memory, seen live: the buddy explained). Safety, goodbye and follow-up instructions still win. Every real explanation (4+ words) is assessed, so concepts turn green as the student teaches. The buddy asks "why / what if / example?" and now and then slips in one plausible wrong idea as a genuine guess.
 - Live check in Telugu: the buddy repeats what it heard, asks "what happens in a dark room?", and suggests "plants eat soil, right?". Tests: worker 139, API 70.
+
+## Feature: your garden (Insights)
+- The learning-level bars are replaced by a garden (`features/app/Garden.tsx`): one plant per topic, one leaf per concept (green once understood, an outline while growing), a taller stem as the level rises, and a flower when the whole topic is understood. Tap a plant to study that topic again. Text in ml/te/en.
+- Fix found in the screenshots: Sarvam Translate sometimes returns chatter ("The translation of the input text…") for short topic names. `looks_broken()` now keeps the original text and doesn't cache the bad result; the bad cache entry was deleted. Tests: API 71.

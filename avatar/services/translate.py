@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import re
 import logging
 
 import httpx
@@ -34,6 +35,15 @@ def needs_translation(text: str | None, target: str) -> bool:
     if not text or not text.strip():
         return False
     return lang.language_of(text, default=target) != target
+
+
+# Short inputs sometimes come back as the model talking about the task
+# ("The translation of the input text is ...") instead of a translation
+_CHATTER = re.compile(r"^(the |here is |here's )?(translation|translated text|input text)|^i (can|cannot|can't)", re.I)
+
+
+def looks_broken(source: str, out: str) -> bool:
+    return bool(_CHATTER.search(out)) or len(out) > 3 * len(source) + 40
 
 
 async def translate(text: str | None, target: str) -> str | None:
@@ -61,6 +71,9 @@ async def translate(text: str | None, target: str) -> str | None:
             )
             r.raise_for_status()
             out = (r.json().get("translated_text") or "").strip() or text
+            if looks_broken(text, out):
+                logger.warning("Translation looked like model chatter; keeping the original")
+                return text  # not cached, so a later try can succeed
     except Exception as e:
         logger.warning(f"Translate {source}->{target} failed, showing original: {type(e).__name__}: {e}")
         return text

@@ -65,6 +65,8 @@ export type Strings = {
   privateNote: string;
   helpNudge: string;
   heroAsk: string;
+  gardenTitle: string;
+  gardenHelp: string;
   styles: { learn: string; learnHint: string; teach: string; teachHint: string; teachStart: string; teachPage: string };
   page: { title: string; body: string; take: string; reading: string; found: string; start: string; retake: string };
   streakLine: (days: number, week: number, concepts: number) => string;
@@ -132,6 +134,8 @@ const en: Strings = {
   learningTitle: 'Learning level',
   privateNote: "Only you can see this. It's your buddy's gentle read, not a diagnosis.",
   heroAsk: 'What shall we do today?',
+  gardenTitle: 'Your garden',
+  gardenHelp: 'Every topic is a plant. Each leaf is a concept: it turns green when you understand it, and the plant flowers when you know the whole topic.',
   styles: {
     learn: 'Learn it',
     learnHint: 'I explain simply and ask small questions.',
@@ -227,6 +231,8 @@ const te: Strings = {
   learningTitle: 'నేర్చుకునే స్థాయి',
   privateNote: 'ఇది నీకు మాత్రమే కనిపిస్తుంది. ఇది నీ బడ్డీ అభిప్రాయం మాత్రమే, డయాగ్నోసిస్ కాదు.',
   heroAsk: 'ఈ రోజు ఏం చేద్దాం?',
+  gardenTitle: 'నీ తోట',
+  gardenHelp: 'ప్రతి టాపిక్ ఒక మొక్క. ప్రతి ఆకు ఒక కాన్సెప్ట్: అర్థమైతే పచ్చగా మారుతుంది, టాపిక్ మొత్తం వస్తే పువ్వు పూస్తుంది.',
   styles: {
     learn: 'నేర్చుకో',
     learnHint: 'నేను సింపుల్ గా చెప్పి, చిన్న ప్రశ్నలు అడుగుతా.',
@@ -322,6 +328,8 @@ const ml: Strings = {
   learningTitle: 'പഠന നില',
   privateNote: 'ഇത് നിനക്ക് മാത്രമേ കാണാനാകൂ. ഇത് കൂട്ടുകാരന്റെ ഒരു തോന്നൽ മാത്രം, രോഗനിർണയമല്ല.',
   heroAsk: 'ഇന്ന് എന്താ ചെയ്യേണ്ടത്?',
+  gardenTitle: 'നിന്റെ തോട്ടം',
+  gardenHelp: 'ഓരോ ടോപിക്കും ഒരു ചെടി. ഓരോ ഇലയും ഒരു കൺസെപ്റ്റ്: മനസ്സിലായാൽ പച്ചയാകും, ടോപിക് മുഴുവൻ അറിഞ്ഞാൽ പൂവിടും.',
   styles: {
     learn: 'പഠിക്കാം',
     learnHint: 'ഞാൻ ലളിതമായി പറഞ്ഞ് ചെറിയ ചോദ്യങ്ങൾ ചോദിക്കും.',
