@@ -64,7 +64,7 @@ export function Scribble({ children, color = 'turmeric', className }: { children
 }
 
 export function MarginNote({ children, className }: { children: ReactNode; className?: string }) {
-  return <p className={cx('font-hand text-[22px] leading-6 text-terracotta', className)}>{children}</p>;
+  return <p className={cx('font-hand text-lead text-terracotta', className)}>{children}</p>;
 }
 
 export function SketchButton({

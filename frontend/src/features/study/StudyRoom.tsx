@@ -310,7 +310,7 @@ function Buddy({ language, talking }: { language: BuddyLanguage; talking: boolea
   return (
     <div className="flex shrink-0 flex-col items-center py-2">
       <BuddyFace mood={mood} size={150} />
-      <p role="status" className="mt-1 font-hand text-[24px] leading-7 text-terracotta">
+      <p role="status" className="mt-1 font-hand text-lead text-terracotta">
         {label}
       </p>
     </div>

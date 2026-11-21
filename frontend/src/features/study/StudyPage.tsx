@@ -118,7 +118,7 @@ export function StudyPage() {
           </div>
         </>
       ) : (
-        <p role="status" className="mt-4 font-hand text-[26px] leading-7 text-terracotta">
+        <p role="status" className="mt-4 font-hand text-lead text-terracotta">
           {t.waiting}
         </p>
       )}

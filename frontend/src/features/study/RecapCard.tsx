@@ -42,7 +42,7 @@ export function RecapCard({ sessionId, language }: { sessionId: string; language
   if (gaveUp && !recap) return null;
   if (!recap) {
     return (
-      <p role="status" className="animate-pulse font-hand text-[24px] leading-7 text-terracotta">
+      <p role="status" className="animate-pulse font-hand text-lead text-terracotta">
         {t.recapWriting}
       </p>
     );
