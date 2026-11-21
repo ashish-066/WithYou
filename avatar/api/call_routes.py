@@ -54,7 +54,11 @@ async def create_call(request: CreateCallRequest, user: User = Depends(require_u
     name = request.candidate_name
 
     logger.info(f"Creating call {call_id} for session {session_id}")
-    await AuthStore().create_interview(session_id, user.org_id, candidate_name=name)
+    topic = (request.topic or "").strip() or None
+    await AuthStore().create_interview(
+        session_id, user.org_id, candidate_name=name, user_id=user.user_id,
+        interview_mode=request.mode, language=request.language, topic=topic,
+    )
 
     try:
         await livekit_service.create_room(room_name)
@@ -73,6 +77,8 @@ async def create_call(request: CreateCallRequest, user: User = Depends(require_u
             "user_id": user.user_id,
             "language": request.language,
             "mode": request.mode,
+            "topic": topic,
+            "voice": request.voice,
             "livekit_url": settings.livekit_url,
             "created_at": datetime.now(UTC).isoformat(),
             "status": "created",
@@ -84,7 +90,11 @@ async def create_call(request: CreateCallRequest, user: User = Depends(require_u
                 session_id=session_id,
                 content="",
                 message_type="system_init",
-                extra_fields={"language": request.language, "mode": request.mode},
+                extra_fields={
+                    "language": request.language,
+                    "mode": request.mode,
+                    **({"topic": topic} if topic else {}),
+                },
             )
         finally:
             await redis.aclose()

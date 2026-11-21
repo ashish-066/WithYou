@@ -85,3 +85,32 @@ Exit: suites green, no proctoring code left (a grep for `vision|proctor|elo|invi
 
 ## Open questions / decisions (status)
 Tracked in `RESHAPE_CHANGELOG.md` → "Decisions".
+
+---
+
+## Phase 6: Production-level app (Ashish, 2026-11-22: "right now it's just two buttons; judges won't find it interesting")
+
+**Goal:** a real mobile app around the buddy, built on data the system already produces: each session's recap, understanding map, topic, mode and language.
+
+### Screens (mobile first, bottom tab bar; side rail on desktop)
+1. **Home**
+   - Time-of-day greeting + the buddy mark
+   - **Stats strip:** day streak, sessions this week, ideas understood (all real, from saved sessions)
+   - **Two rich mode cards:** "Study with me" / "Just talk"
+   - **Topic suggestions** (localized chips) that start a study session on that topic
+   - **"Pick up where you left off":** the last session's recap snippet with its "next time" idea
+   - **Mood check-in** chips that start a Just-talk session
+2. **Learn flow:** topic picker (suggestions + type your own) → connecting screen → room (existing) → recap screen
+3. **History:** every past session (mode icon, topic, date, language, ideas understood) → tap → **Session detail:** the recap card + the topic's idea list with status (study), or the gentle note (talk)
+4. **Progress ("Your learning journey"):** topics learned, ideas understood per topic, the streak calendar of the last 14 days
+5. **Profile:** name, default language, buddy voice (Kavya / Shubh), "Help & safety" (Tele-MANAS 14416, 112), sign out
+6. **Rebrand** login and 404 (they still say "Presence View")
+
+### Backend
+- `POST /calls/` adds `topic` (optional starting topic) and `voice` (kavya | shubh). The mode goes on the session record (`interview_mode` column reused: study | talk); the language is kept in the saved analytics.
+- Brain: a starting topic sets `current_topic` and plans its key ideas at setup (no spoken reply). The agent greets *with* the topic ("Let's study photosynthesis today!").
+- `GET /me/sessions` (recent sessions with mode/topic/language/title/ideas), `GET /me/stats` (streak, week count, ideas understood, topics), `GET /me/sessions/{id}` (recap + ideas).
+- Tests for every endpoint (owner-only).
+
+### Order
+Backend + tests → app shell + nav → Home → Learn flow (topic) → History + detail → Progress → Profile → rebrand → phone-size screenshots → commit.

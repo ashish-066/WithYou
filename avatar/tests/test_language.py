@@ -30,6 +30,8 @@ def test_greeting_and_nudges_in_each_language():
     assert lang.language_of(lang.greeting("ml-IN")) == "ml-IN"
     assert lang.language_of(lang.greeting(None)) == "ml-IN"  # default
     assert lang.greeting("te-IN", "talk") == lang.TALK_GREETINGS["te-IN"]
+    assert "Gravity" in lang.greeting("te-IN", "study", "Gravity")
+    assert lang.greeting("te-IN", "talk", "Gravity") == lang.TALK_GREETINGS["te-IN"]  # talk ignores topics
     assert lang.language_of(lang.greeting("ml-IN", "talk")) == "ml-IN"
     for code in lang.SUPPORTED:
         assert lang.language_of(lang.nudge("repeat_offer", code)) == code

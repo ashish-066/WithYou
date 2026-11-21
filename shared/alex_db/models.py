@@ -125,6 +125,10 @@ class Interview(Base):
     candidate_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     role_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
     interview_mode: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Study buddy: session language (ml-IN | te-IN | en-IN), starting topic, owner
+    language: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    topic: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    user_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=False)
     dsa_problem_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="created")
     created_at: Mapped[datetime] = _created()

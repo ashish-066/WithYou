@@ -138,3 +138,27 @@ def test_session_memory_reaches_the_prompt_for_callbacks():
     assert "Hard at first, now understood (celebrate!): Plants make food from sunlight" in memory
     assert "Still working on it (be encouraging): Chlorophyll" in memory
     assert conversation.session_memory({}) == "Nothing yet."
+
+
+async def test_starting_topic_is_planned_at_setup_without_a_reply(redis, monkeypatch):
+    from brain.processor import MessageProcessor
+    from services.streams import StreamMessage
+
+    async def plan(topic, language, llm=None):
+        return ["Gravity pulls things down", "Heavier and lighter fall together"]
+
+    monkeypatch.setattr(u, "plan_points", plan)
+
+    class Graph:
+        calls = 0
+
+        async def ainvoke(self, st, config=None):
+            Graph.calls += 1
+            return st
+
+    p = MessageProcessor(redis, graph=Graph())
+    r = await p.process(StreamMessage("1-0", "s", "g1", "system_init", "", "", {"language": "en-IN", "topic": "Gravity"}))
+    assert r["response"] == "" and Graph.calls == 0  # no reply over the greeting
+    state = await p.context_manager.get_context("g1")
+    assert state["current_topic"] == "Gravity" and state["understanding"]["topic"] == "Gravity"
+    assert [pt["text"] for pt in state["understanding"]["points"]][0] == "Gravity pulls things down"

@@ -124,6 +124,19 @@ class MessageProcessor:
                     state["language"] = raw_data["language"]
                 if raw_data.get("mode") in talk.MODES:
                     state["session_mode"] = raw_data["mode"]
+                # A topic picked on the start screen: plan its key ideas now (the
+                # learner is still hearing the greeting), so checks can start at once
+                topic = str(raw_data.get("topic") or "").strip()
+                if topic and not talk.is_talk(state):
+                    state["current_topic"] = topic
+                    try:
+                        points = await asyncio.wait_for(
+                            understanding.plan_points(topic, state.get("language") or "en-IN"), timeout=8
+                        )
+                        if points:
+                            state["understanding"] = understanding.new_map(topic, state.get("language") or "en-IN", points)
+                    except Exception as e:
+                        logger.warning(f"Could not plan ideas for '{topic}' at setup: {type(e).__name__}: {e}")
                 if not raw_data.get("job_description"):
                     # Setup only: nothing to say (the voice agent greets)
                     await self.context_manager.update_context(session_id, state)

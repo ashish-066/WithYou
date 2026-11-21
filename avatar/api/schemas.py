@@ -14,6 +14,10 @@ class CreateCallRequest(BaseModel):
     )
     # "study" (teach + gentle checks) or "talk" (just talk: a warm listener)
     mode: Literal["study", "talk"] = Field(default="study", description="Kind of session")
+    # Optional starting topic (study): the buddy greets with it and plans its key ideas
+    topic: str | None = Field(default=None, max_length=120)
+    # Buddy voice (Sarvam Bulbul v3 speaker)
+    voice: Literal["kavya", "shubh"] = Field(default="kavya")
 
     candidate_name: str = Field(
         default="Learner",

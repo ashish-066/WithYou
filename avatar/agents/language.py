@@ -32,6 +32,13 @@ GREETINGS = {
     ),
 }
 
+# Study session that starts with a topic picked in the app
+TOPIC_GREETINGS = {
+    "ml-IN": "ഹായ്! ഇന്ന് നമുക്ക് {topic} പഠിക്കാം. ഞാൻ ലളിതമായി പറഞ്ഞു തുടങ്ങട്ടെ?",
+    "te-IN": "హాయ్! ఈ రోజు మనం {topic} గురించి నేర్చుకుందాం. నేను సింపుల్ గా మొదలుపెట్టనా?",
+    "en-IN": "Hey! Today let's study {topic} together. Shall I start with the simple version?",
+}
+
 # "Just talk" mode: the buddy as a listener
 TALK_GREETINGS = {
     "ml-IN": "ഹായ്! ഞാൻ ഇവിടെ ഉണ്ട്. ഇന്ന് എങ്ങനെയുണ്ട്? എന്തും പറയാം, ഞാൻ കേൾക്കാം.",
@@ -85,7 +92,9 @@ def language_of(text: str, default: str = "en-IN") -> str:
     return "en-IN" if any(ch.isalpha() for ch in text) else default
 
 
-def greeting(language: str | None, mode: str | None = None) -> str:
+def greeting(language: str | None, mode: str | None = None, topic: str | None = None) -> str:
+    if mode != "talk" and topic:
+        return TOPIC_GREETINGS.get(language or "", TOPIC_GREETINGS["ml-IN"]).format(topic=topic)
     lines = TALK_GREETINGS if mode == "talk" else GREETINGS
     return lines.get(language or "", lines["ml-IN"])
 

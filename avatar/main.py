@@ -23,6 +23,7 @@ from sqlalchemy import text
 
 import core.db  # noqa: F401  (configures the database)
 from api.auth_routes import router as auth_router
+from api.me_routes import router as me_router
 from api.routes import router
 from core.config import settings
 from core.redis import get_redis_client
@@ -76,6 +77,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(router)
+app.include_router(me_router)
 
 
 @app.get("/health", tags=["Health"])

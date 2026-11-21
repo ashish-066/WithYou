@@ -124,7 +124,7 @@ class BuddyVoice:
         self.language = language
 
 
-def build_speech(language: str):
+def build_speech(language: str, voice: str | None = None):
     """Speech-to-text and text-to-speech for a session (VOICE_PROVIDER)."""
     if settings.voice_provider == "deepgram":
         # English-only fallback (e.g. if Sarvam is down during a demo)
@@ -141,7 +141,7 @@ def build_speech(language: str):
         sarvam.TTS(
             model=settings.tts_model,
             target_language_code=language,
-            speaker=settings.tts_speaker,
+            speaker=voice if voice in ("kavya", "shubh") else settings.tts_speaker,
         ),
     )
 
@@ -341,7 +341,7 @@ async def entrypoint(ctx: JobContext) -> None:
 
     try:
         # Create agent session with STT, TTS, VAD (NO LLM - Brain Worker handles this)
-        stt, tts = build_speech(start_language)
+        stt, tts = build_speech(start_language, (call or {}).get("voice"))
         voice = BuddyVoice(tts, start_language, stt=stt, relay=relay)
         relay.language = start_language
         session = AgentSession(
@@ -483,7 +483,7 @@ async def entrypoint(ctx: JobContext) -> None:
         )
 
         # The buddy says hello first (spoken by the agent; the brain answers from then on)
-        greeting = lang.greeting(start_language, (call or {}).get("mode"))
+        greeting = lang.greeting(start_language, (call or {}).get("mode"), (call or {}).get("topic"))
         voice.prepare(greeting)
         logger.info(f"Speaking initial greeting for session {session_id}")
         await session.say(greeting, allow_interruptions=settings.allow_interruptions)
