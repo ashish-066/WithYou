@@ -234,3 +234,8 @@ Ashish: "the UI looks good but it doesn't give the same humanish feeling". Two c
    - Real brain: "అంటే" → "హా, చెప్పు… నీకు ఏది కావాలంటే అది మొదలుపెట్టు."; "బోర్ గా ఉంది" → "అరె, బోర్ కొట్టడం సహజమేనే…"; gravity → "ఓహ్, గ్రావిటీ అంటే చాలా సింపుల్!…"
 - **End-of-turn patience:** LiveKit's end-of-turn model doesn't know Telugu/Malayalam, so a pause alone ends the turn. Wait 0.9 s instead of 0.5 s (`ENDPOINTING_MIN_DELAY`), so a thinking pause isn't sent as its own turn.
 - Tests: worker 114, avatar 58; frontend builds.
+
+## "It changed to the AI interview thing" (2026-11-22)
+- **Cause:** LiveKit project `aa-v5cciyrx` (the key Ashish switched to) has the **old Presence View interviewer deployed** somewhere (not on this laptop). It joins **every** new room automatically, with a BeyondPresence avatar named "Presence". Proven: in a room where our agent was *not* dispatched, `agent-AJ_…` + `bey-avatar` ("Presence") joined within 4 s.
+- **Fix (Ashish):** a new LiveKit project, `withyou-vbwmh652`. Verified: no uninvited agent in 16 s; our agent is dispatched → avatar started → greeting complete.
+- Our agent only ever joins by explicit dispatch (`padippu-buddy`), so it can't cause this itself. **Lesson for the demo:** use a LiveKit project with nothing else deployed on it.
