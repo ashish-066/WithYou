@@ -251,3 +251,22 @@ Ashish: "the UI looks good but it doesn't give the same humanish feeling". Two c
 - **Crisis safety in both modes:** self-harm / wanting-to-die language (English, Telugu, Malayalam) is detected **in code**. The next reply gets a one-turn instruction: calm, serious, thank them for telling, ask if they're safe, talk to someone trusted, **Tele-MANAS 14416**, **112** in danger, "a buddy, not a counsellor". It's never cheerful and never ends the session, even if phrased as a goodbye. The end card then always shows the helpline text word for word (`help`). Everyday phrases ("this exam is killing me", "I could die laughing") don't trigger it.
 - **Real brain (Telugu, talk mode):** exam stress → validating + gentle question; fear of mom scolding → empathy, no study push; "కొన్నిసార్లు నాకు చనిపోవాలని అనిపిస్తుంది" → "నువ్వు ఇప్పుడు safe గా ఉన్నావా? … buddy ని మాత్రమే, counsellor ని కాదు … 14416 … 112". The opening ("I'm happy you told me") was fixed to "thank you for telling me".
 - **Tests:** new `worker/tests/test_talk.py` (19): crisis phrases en/te/ml, everyday non-crisis phrases, safety reply in study mode that doesn't end the session, talk mode skips study bookkeeping, listener prompt, talk goodbye + private card + helpline. **Worker 133, avatar 58**; frontend builds.
+
+## Phase 6: Production-level app (2026-11-22). Ashish: "it's just two buttons; judges won't find it interesting"
+Plan written to `context/plan.md` (Phase 6). Built:
+- **Backend:**
+  - migration **0006** (`interviews.language`, `topic`, `user_id` + index)
+  - `GET /me/sessions`, `/me/sessions/{id}` (talk sessions never expose what was shared), `/me/stats` (day streak in IST, this week, ideas understood, topics with progress, last-14-days activity)
+  - calls take a starting **topic** (the brain plans its key ideas at setup; the agent greets with it) and a **voice** (Kavya/Shubh)
+  - mood chips start talk sessions: the greeting acknowledges the mood and the talk prompt knows it
+  - Tests: avatar **61** (+ `test_me_routes.py`), worker **135**
+- **App** (`frontend/src/features/app/`), all in ml/te/en:
+  - **app shell:** bottom tab bar on phones, side rail on desktop
+  - **Home:** greeting by time of day, real stats tiles (streak / this week / ideas), two rich mode cards, "pick up where you left off" (topic progress bar + the recap's next-time line), quick-topic chips, mood check-in
+  - **Learn:** type any topic or pick from your topics / suggestions
+  - **History:** grouped by day → **Session detail:** recap card + key ideas with status, "study this again", helpline button if needed
+  - **Progress:** streak, 14-day strip, totals, per-topic progress
+  - **Profile:** language, buddy voice, Help & safety (tap-to-call 14416), sign out
+  - **/session:** auto-starts from the tap, with a connecting animation → room → recap with Home / Again
+  - Login and 404 rebranded (no more "Presence View"); the old recruiter dashboard frame was removed; the PWA starts at `/`
+- **Verified:** screenshots at 390×844 (and 1280 desktop) of login, Home, Learn, History, detail, Progress and Profile, with a seeded demo learner (`demo.learner@studybuddy.local` / `demo-password-123`, 4 Telugu sessions in the dev DB). Build + PWA check OK.

@@ -9,7 +9,8 @@ import { useAuth } from '../hooks/useAuth';
 import { getAuthConfig, login, signup } from '../services/authApi';
 import { useQuery } from '@tanstack/react-query';
 import { homeFor } from '../areas/shared/routing';
-import { Button, Field, Input, Mark } from '../ui';
+import { BookOpen, Lightbulb, MessageCircleHeart, Mic } from 'lucide-react';
+import { Button, Field, Input } from '../ui';
 import type { AuthUser } from '../types';
 
 /** Only same-site paths, so a crafted ?next= can't send users to another site */
@@ -63,13 +64,35 @@ export function LoginPage() {
     <div data-area="app" className="flex min-h-screen flex-col">
       <header className="px-6 py-5 sm:px-10">
         <span className="inline-flex items-center gap-2.5">
-          <Mark />
-          <span className="font-display text-[19px] text-ink">Presence View</span>
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-accent-on">
+            <BookOpen size={18} aria-hidden />
+          </span>
+          <span className="font-display text-[19px] text-ink">Study Buddy</span>
         </span>
       </header>
 
-      <main className="flex flex-1 items-start justify-center px-6 pb-16 pt-[8vh] sm:px-10">
-        <div className="w-full max-w-[380px]">
+      <main className="flex flex-1 flex-col items-center justify-start gap-10 px-6 pb-16 pt-[4vh] sm:px-10 lg:flex-row lg:items-start lg:justify-center lg:gap-20">
+        {/* What it is, at a glance */}
+        <section aria-label="About" className="w-full max-w-[380px] lg:pt-2">
+          <p className="font-display text-h1 text-ink">പഠിപ്പ് കൂട്ടുകാരൻ</p>
+          <p className="mt-1 text-lead text-muted">చదువుకునే స్నేహితుడు · Your study buddy</p>
+          <ul className="mt-6 space-y-3">
+            {[
+              { Icon: Mic, text: 'Talk in Malayalam, Telugu or English' },
+              { Icon: Lightbulb, text: 'Learns with you, asks gentle questions, never grades' },
+              { Icon: MessageCircleHeart, text: 'Or just talk when exams feel heavy' },
+            ].map(({ Icon, text }) => (
+              <li key={text} className="flex items-start gap-3 text-body text-ink">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
+                  <Icon size={16} aria-hidden />
+                </span>
+                <span className="pt-1.5">{text}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <div className="w-full max-w-[380px] rounded-ui border border-line bg-surface p-6">
           <h1 className="font-display text-h2 text-ink">{mode === 'login' ? 'Sign in' : 'Create your account'}</h1>
           <p className="mt-2 text-lead text-muted">
             {mode === 'login'
@@ -134,7 +157,7 @@ export function LoginPage() {
             )}
 
             <Button type="submit" variant="primary" loading={busy} className="w-full">
-              {mode === 'login' ? 'Sign in' : 'Create organization'}
+              {mode === 'login' ? 'Sign in' : 'Create account'}
             </Button>
           </form>
 
@@ -149,7 +172,7 @@ export function LoginPage() {
                 }}
                 className="font-medium text-accent underline-offset-2 hover:underline"
               >
-                {mode === 'login' ? 'Create an organization' : 'Sign in'}
+                {mode === 'login' ? 'Create an account' : 'Sign in'}
               </button>
             </p>
           )}

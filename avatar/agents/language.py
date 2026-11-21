@@ -46,6 +46,13 @@ TALK_GREETINGS = {
     "en-IN": "Hey, I'm here. How's your day going? Tell me anything, I'm listening.",
 }
 
+# "Just talk" started from a mood chip on Home ("Stressed", "ఎగ్జామ్ భయం", ...)
+TALK_MOOD_GREETINGS = {
+    "ml-IN": "ഹായ്, ഞാൻ ഇവിടെ ഉണ്ട്. '{topic}' എന്നാണല്ലോ തോന്നുന്നത്. എന്താ പറ്റിയത്? പറയാൻ തോന്നുന്നതൊക്കെ പറഞ്ഞോ.",
+    "te-IN": "హాయ్, నేను ఇక్కడే ఉన్నాను. '{topic}' అని అనిపిస్తోంది కదా. ఏం జరిగింది? నీకు చెప్పాలనిపించింది ఏదైనా చెప్పు.",
+    "en-IN": "Hey, I'm here. You said you're feeling '{topic}'. Want to tell me what's going on? Take your time.",
+}
+
 # Short lines the agent says itself (agents/interview_monitor.py keys)
 NUDGES = {
     "repeat_offer": {
@@ -93,8 +100,9 @@ def language_of(text: str, default: str = "en-IN") -> str:
 
 
 def greeting(language: str | None, mode: str | None = None, topic: str | None = None) -> str:
-    if mode != "talk" and topic:
-        return TOPIC_GREETINGS.get(language or "", TOPIC_GREETINGS["ml-IN"]).format(topic=topic)
+    if topic:
+        lines = TALK_MOOD_GREETINGS if mode == "talk" else TOPIC_GREETINGS
+        return lines.get(language or "", lines["ml-IN"]).format(topic=topic)
     lines = TALK_GREETINGS if mode == "talk" else GREETINGS
     return lines.get(language or "", lines["ml-IN"])
 

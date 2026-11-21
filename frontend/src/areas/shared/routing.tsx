@@ -4,10 +4,11 @@
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import type { AuthUser } from '@/types';
-import { buttonClass, Mark } from '@/ui';
+import { BookOpen } from 'lucide-react';
+import { buttonClass } from '@/ui';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const homeFor = (_user: AuthUser) => '/study';
+export const homeFor = (_user: AuthUser) => '/';
 
 /** Blank page in the workspace colours while the session is checked. */
 export function Blank() {
@@ -47,8 +48,10 @@ export function NotFound() {
     <div data-area="app" className="min-h-screen">
       <div className="mx-auto max-w-content px-4 py-6 sm:px-8">
         <a href="/" className="inline-flex items-center gap-2.5">
-          <Mark />
-          <span className="font-display text-[19px] text-ink">Presence View</span>
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-accent-on">
+            <BookOpen size={18} aria-hidden />
+          </span>
+          <span className="font-display text-[19px] text-ink">Study Buddy</span>
         </a>
         <NotFoundContent />
       </div>

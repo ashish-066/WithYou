@@ -221,6 +221,7 @@ async def conversation_tool(
             user_message=input_data.user_message,
             interviewer_instruction=state.get("interviewer_instruction") or "None",
             session_memory=session_memory(state),
+            mood=state.get("mood") or "Not shared.",
             mode=turn_mode(state),
             coach_rules=COACH_RULES,
             language_rule=language_rule(state),

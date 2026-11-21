@@ -303,6 +303,8 @@ class InterviewState(TypedDict, total=False):
     language: str
     # "study" (default) or "talk" (Just talk: emotional buddy, brain/talk.py)
     session_mode: str
+    # Talk mode started from a mood chip ("Stressed"): how they said they feel
+    mood: str
     # Self-harm language came up this session (brain/talk.py): the end card shows the helpline
     crisis_flagged: bool
     # Understanding map of the current topic (brain/understanding.py)

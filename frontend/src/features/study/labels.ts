@@ -38,6 +38,7 @@ type Labels = {
   keepGoing: string;
   ending: string;
   tapForSound: string;
+  home: string;
   recapWriting: string;
   recapCovered: string;
   recapImproved: string;
@@ -80,6 +81,7 @@ const en: Labels = {
   keepGoing: 'Keep studying',
   ending: 'Finishing…',
   tapForSound: 'Tap to turn on sound',
+  home: 'Home',
   recapWriting: 'Your buddy is writing your recap…',
   recapCovered: 'What we studied',
   recapImproved: 'Where you got sharper',
@@ -121,6 +123,7 @@ const te: Labels = {
   keepGoing: 'ఇంకా చదువుదాం',
   ending: 'ముగిస్తోంది…',
   tapForSound: 'సౌండ్ కోసం ట్యాప్ చేయి',
+  home: 'హోమ్',
   recapWriting: 'నీ బడ్డీ నీ రీక్యాప్ రాస్తోంది…',
   recapCovered: 'ఈ రోజు మనం నేర్చుకున్నది',
   recapImproved: 'నువ్వు మెరుగైనది',
@@ -162,6 +165,7 @@ const ml: Labels = {
   keepGoing: 'ഇനിയും പഠിക്കാം',
   ending: 'നിർത്തുന്നു…',
   tapForSound: 'ശബ്ദത്തിനായി ടാപ്പ് ചെയ്യൂ',
+  home: 'ഹോം',
   recapWriting: 'നിന്റെ കൂട്ടുകാരൻ റീക്യാപ് എഴുതുന്നു…',
   recapCovered: 'ഇന്ന് നമ്മൾ പഠിച്ചത്',
   recapImproved: 'നീ മെച്ചപ്പെട്ടത്',

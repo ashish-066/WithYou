@@ -21,6 +21,8 @@ export interface CreateCallRequest {
   candidate_name: string;
   language: BuddyLanguage;
   mode: SessionMode;
+  topic?: string;
+  voice?: 'kavya' | 'shubh';
 }
 
 export interface CallStatus {

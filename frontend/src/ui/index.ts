@@ -13,4 +13,3 @@ export { Tabs, type TabItem } from './Tabs';
 export { Dialog, Drawer } from './Overlay';
 export { ToastProvider, useToast } from './Toast';
 export { DefinitionList, CopyField } from './Facts';
-export { AppShell, Mark, type Area, type NavGroup, type NavItem } from './AppShell';

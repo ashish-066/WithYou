@@ -93,6 +93,53 @@ export async function getRecap(sessionId: string): Promise<{ status: 'pending' |
   return response.json();
 }
 
+// ---------------------------------------------------------------------------
+// The learner's own sessions and progress (/me)
+// ---------------------------------------------------------------------------
+
+export interface SessionSummary {
+  session_id: string;
+  created_at: string | null;
+  ended_at: string | null;
+  status: string;
+  mode: 'study' | 'talk';
+  language: string | null;
+  topic: string | null;
+  title: string | null;
+  summary: string | null;
+  next_time: string | null;
+  ideas_total: number;
+  ideas_understood: number;
+}
+
+export interface SessionDetail extends SessionSummary {
+  recap: Recap | null;
+  ideas: { text: string; status: 'unseen' | 'partial' | 'gap' | 'understood' }[];
+}
+
+export interface Stats {
+  streak_days: number;
+  sessions_total: number;
+  sessions_this_week: number;
+  ideas_understood: number;
+  topics: { topic: string; sessions: number; ideas_understood: number; ideas_total: number; last: string | null }[];
+  last_14_days: { day: string; active: boolean }[];
+}
+
+async function getJson<T>(path: string): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`);
+  if (!response.ok) {
+    const err = new Error(`Request failed: ${response.status}`) as Error & { status?: number };
+    err.status = response.status;
+    throw err;
+  }
+  return response.json();
+}
+
+export const getMySessions = () => getJson<{ sessions: SessionSummary[] }>('/me/sessions');
+export const getMySession = (id: string) => getJson<SessionDetail>(`/me/sessions/${encodeURIComponent(id)}`);
+export const getMyStats = () => getJson<Stats>('/me/stats');
+
 /**
  * Health check for the API.
  */

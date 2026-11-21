@@ -145,3 +145,11 @@ async def test_talk_goodbye_and_end_card_with_helpline_after_a_crisis(monkeypatc
     card = out["descriptive_report"]
     assert card["mode"] == "talk" and "14416" in card["help"]
     assert card["covered"] == [] and card["improved"] == []  # nothing private on the card
+
+
+async def test_mood_from_home_reaches_the_talk_prompt(redis, monkeypatch):
+    graph = Graph()
+    p = MessageProcessor(redis, graph=graph)
+    await p.process(msg(1, "system_init", language="te-IN", mode="talk", topic="ఎగ్జామ్ భయం"))
+    state = await p.context_manager.get_context("t1")
+    assert state["mood"] == "ఎగ్జామ్ భయం" and "understanding" not in state  # no study plan in talk mode

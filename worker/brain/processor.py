@@ -127,6 +127,8 @@ class MessageProcessor:
                 # A topic picked on the start screen: plan its key ideas now (the
                 # learner is still hearing the greeting), so checks can start at once
                 topic = str(raw_data.get("topic") or "").strip()
+                if topic and talk.is_talk(state):
+                    state["mood"] = topic[:120]  # how they said they feel (mood chip)
                 if topic and not talk.is_talk(state):
                     state["current_topic"] = topic
                     try:

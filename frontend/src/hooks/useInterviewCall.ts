@@ -12,7 +12,13 @@ interface UseInterviewCallReturn {
   error: string | null;
   /** The session that just ended (its recap is shown on the finish screen) */
   endedSessionId: string | null;
-  startCall: (learnerName: string, language: BuddyLanguage, mode: SessionMode) => Promise<void>;
+  startCall: (
+    learnerName: string,
+    language: BuddyLanguage,
+    mode: SessionMode,
+    topic?: string,
+    voice?: 'kavya' | 'shubh',
+  ) => Promise<void>;
   endCurrentCall: () => Promise<void>;
 }
 
@@ -22,18 +28,21 @@ export function useInterviewCall(): UseInterviewCallReturn {
   const [error, setError] = useState<string | null>(null);
   const [endedSessionId, setEndedSessionId] = useState<string | null>(null);
 
-  const startCall = useCallback(async (learnerName: string, language: BuddyLanguage, mode: SessionMode) => {
+  const startCall = useCallback(
+    async (learnerName: string, language: BuddyLanguage, mode: SessionMode, topic?: string, voice?: 'kavya' | 'shubh') => {
     setState('connecting');
     setError(null);
     try {
-      const response = await createCall({ candidate_name: learnerName, language, mode });
+      const response = await createCall({ candidate_name: learnerName, language, mode, topic, voice });
       setCallData(response);
       setState('connected');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start the session');
       setState('error');
     }
-  }, []);
+  },
+    [],
+  );
 
   const endCurrentCall = useCallback(async () => {
     if (callData) {

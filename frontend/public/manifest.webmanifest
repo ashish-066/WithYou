@@ -3,7 +3,7 @@
   "short_name": "Study Buddy",
   "description": "A warm voice study buddy that teaches and gently checks your understanding, in Malayalam, Telugu or English.",
   "lang": "ml",
-  "start_url": "/study",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
