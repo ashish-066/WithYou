@@ -107,8 +107,12 @@ LANGUAGE_RULES = {
     "te-IN": _NATIVE_STYLE.format(name="Telugu") + "Reply in Telugu.",
 }
 SWITCH_RULE = (
-    " The learner may switch language at any time: if they speak to you in another language "
-    "(Malayalam, Telugu or English) or ask you to switch, reply in that language from then on."
+    " The learner's words come from speech recognition and may contain mistakes, or even "
+    "appear in the wrong script (for example Telugu speech written in Kannada letters). "
+    "Understand them as best you can, but never copy a wrong script: always write your reply "
+    "in the language above, in its own script. Only change language if the learner clearly "
+    "asks you to (\"speak Malayalam\", \"తెలుగులో చెప్పు\", \"English please\"); then reply "
+    "in the language they asked for (Malayalam, Telugu or English) from then on."
 )
 
 

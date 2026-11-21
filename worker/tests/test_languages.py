@@ -131,7 +131,8 @@ def test_prompt_language_rule_follows_the_session(monkeypatch):
     assert "Reply in Telugu." in conversation.language_rule({"language": "te-IN"})
     assert "Reply in Malayalam." in conversation.language_rule({})
     assert "Reply in English." in conversation.language_rule({"language": "en-IN"})
-    assert "switch" in conversation.language_rule({"language": "te-IN"})
+    rule = conversation.language_rule({"language": "te-IN"})
+    assert "never copy a wrong script" in rule and "change language" in rule
 
 
 @pytest.mark.parametrize(
@@ -213,3 +214,30 @@ def test_indic_reply_is_never_mojibake(raw, expected):
     text = conversation._parse_conversation_response(raw).response_text
     assert text == expected
     assert "à" not in text
+
+
+@pytest.mark.parametrize(
+    "text,current,expected",
+    [
+        ("ఇప్పుడు మలయాళంలో చెప్పు", "te-IN", "ml-IN"),
+        ("ഇനി തെലുങ്കിൽ പറയൂ", "ml-IN", "te-IN"),
+        ("can you speak English now?", "te-IN", "en-IN"),
+        ("ఇంగ్లీష్ లో చెప్పు", "te-IN", "en-IN"),
+        ("Malayalam please", "en-IN", "ml-IN"),
+        ("ప్రకాశసంశ్లేషణ అంటే ఏమిటి?", "te-IN", None),  # no request
+        ("ఇప్పుడు తెలుగులో చెప్పు", "te-IN", None),  # already Telugu
+        ("Telugu or Malayalam, which is older?", "en-IN", None),  # not a request
+    ],
+)
+def test_spoken_language_switch_requests(text, current, expected):
+    from brain.language_switch import requested_language
+
+    assert requested_language(text, current) == expected
+
+
+async def test_asking_to_switch_changes_the_session_language_before_the_reply(redis):
+    graph = EchoGraph()
+    p = MessageProcessor(redis, graph=graph)
+    await p.process(msg(1, "system_init", language="te-IN"))
+    await p.process(msg(2, "candidate_response", "ఇప్పుడు మలయాళంలో చెప్పు", language="te-IN"))
+    assert graph.seen[-1]["language"] == "ml-IN"  # the reply is generated in Malayalam

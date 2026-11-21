@@ -140,3 +140,16 @@ Ashish: it works, but the voice breaks. Diagnosis from the session transcript in
 - **Corrected diagnosis: echo, not people nearby.** On laptop speakers the buddy's own Bulbul voice came back through the mic. Sarvam STT (language auto) transcribed it as garbled "other languages". That cut the buddy off mid-sentence (the breaking), and then it answered its own echo (the loop). Browser echo cancellation wasn't enough.
 - **Fix (Ashish chose "harder to interrupt"):** interruptions are **off by default** (`ALLOW_INTERRUPTIONS=false`), with `discard_audio_if_uninterruptible=True`, so mic audio is thrown away while the buddy speaks. All `session.say` calls follow the setting (they used to force `allow_interruptions=True`). If barge-in is turned back on, the thresholds are now 1.2 s / 3 words. Trade-off: the learner can't interrupt the buddy mid-sentence (replies are short).
 - Test: `test_buddy_cannot_be_cut_off_by_its_own_echo_by_default`. Avatar **54 passed**.
+
+## Phase 2 manual test, round 3: "I talked in Telugu, why did it reply in Malayalam?" (2026-11-22)
+**Diagnosis from Redis:** Sarvam STT with `language=auto` transcribed Ashish's **Telugu speech as Kannada** (Kannada script *and* grammar: "ಮಾಡ್ತಾ ಇದೀನಿ"). The brain copied that script and replied in Kannada. The voice didn't recognise Kannada script, fell back to the **English** Bulbul voice reading Kannada text (the odd "Malayalam-ish" sound) and gave the English "No rush" nudge. Auto-detect was perfect on clean TTS audio but is unreliable on a real mic (Telugu/Kannada are close).
+
+**Fixes:**
+- **Recognition locked to the session language** (`STT_LANGUAGE=session`, default; `auto` still available). Switching updates it live (Sarvam in-band `config.update`, applies from the next utterance). Verified against the real service: locked te-IN → switched to ml-IN mid-stream → both finals exact.
+- **Two ways to switch mid-session:**
+  1. **Language buttons in the room** (മല / తెలు / EN) → data message (topic `buddy-language`) → agent switches listening and voice, and the buddy confirms in the new language.
+  2. **By voice**, e.g. "ఇప్పుడు మలయాళంలో చెప్పు" / "speak English": new `worker/brain/language_switch.py` detects the request **in code** and changes the session language before the reply. (The model, told "Reply in Telugu", would say "OK, in Malayalam" and keep speaking Telugu.) The voice agent then follows the reply's script and also moves listening to it (Indian languages only; an English reply doesn't move listening).
+- **Prompt:** transcripts may be in the wrong script; understand them, but always reply in the session language's own script; change language only on a clear request.
+- **Voice:** text in another Indian script now keeps the current voice, never the English one.
+- **Real brain:** the exact misheard Kannada turn in a Telugu session → reply in Telugu (317 Telugu chars, 0 Kannada); "ఇప్పుడు మలయాళంలో చెప్పు" → reply in Malayalam.
+- **Tests:** worker **103 passed** (+9: switch requests incl. not-a-request and ambiguous cases, processor switches before the reply), avatar **56 passed** (+2: Kannada → current voice, listening follows the buddy, buttons switch both).

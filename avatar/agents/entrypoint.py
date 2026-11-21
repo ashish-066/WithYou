@@ -76,6 +76,10 @@ TURN_HANDLING = {
 }
 
 
+# Data channel topic for the language buttons in the room (frontend: InterviewRoom)
+LANGUAGE_TOPIC = "buddy-language"
+
+
 class BuddyVoice:
     """Speaks each line in the language of its words (agents/language.py).
 
@@ -83,8 +87,10 @@ class BuddyVoice:
     before a line takes effect for that line, pooled connection or not.
     """
 
-    def __init__(self, tts, language: str):
+    def __init__(self, tts, language: str, stt=None, relay: "TurnRelay | None" = None):
         self.tts = tts
+        self.stt = stt
+        self.relay = relay
         self.language = language  # language of the last line spoken
         self.switchable = isinstance(tts, sarvam.TTS)
 
@@ -93,7 +99,27 @@ class BuddyVoice:
         if self.switchable and target != self.language:
             self.tts.update_options(target_language_code=target)
             logger.info(f"[VOICE] Speaking {target} (was {self.language})")
+        # The buddy switched to another Indian language (the learner asked):
+        # listen in it too. English replies don't move recognition, since
+        # English words are understood within Telugu/Malayalam anyway.
+        if target != "en-IN" and target != self.language:
+            self.listen_in(target)
         self.language = target
+
+    def listen_in(self, language: str) -> None:
+        """Recognise the learner's speech in `language` (from the next utterance)."""
+        if self.relay is not None:
+            self.relay.language = language
+        if isinstance(self.stt, sarvam.STTRealtime) and settings.stt_language != "auto":
+            self.stt.update_options(language=language)
+            logger.info(f"[VOICE] Listening in {language}")
+
+    def switch_to(self, language: str) -> None:
+        """The learner picked a language (buttons in the room)."""
+        self.listen_in(language)
+        if self.switchable:
+            self.tts.update_options(target_language_code=language)
+        self.language = language
 
 
 def build_speech(language: str):
@@ -105,9 +131,11 @@ def build_speech(language: str):
             deepgram.TTS(model=settings.deepgram_tts_model),
         )
     return (
-        # language="auto": detects Malayalam/Telugu/English per utterance, so the
-        # learner can switch mid-conversation
-        sarvam.STTRealtime(language=settings.stt_language),
+        # Locked to the session's language ("auto" heard Telugu as Kannada on a
+        # real mic); switching updates it live (BuddyVoice.listen_in)
+        sarvam.STTRealtime(
+            language=language if settings.stt_language == "session" else settings.stt_language
+        ),
         sarvam.TTS(
             model=settings.tts_model,
             target_language_code=language,
@@ -312,7 +340,7 @@ async def entrypoint(ctx: JobContext) -> None:
     try:
         # Create agent session with STT, TTS, VAD (NO LLM - Brain Worker handles this)
         stt, tts = build_speech(start_language)
-        voice = BuddyVoice(tts, start_language)
+        voice = BuddyVoice(tts, start_language, stt=stt, relay=relay)
         relay.language = start_language
         session = AgentSession(
             stt=stt,
@@ -323,8 +351,10 @@ async def entrypoint(ctx: JobContext) -> None:
 
         def on_user_input_transcribed(ev: agents.voice.UserInputTranscribedEvent) -> None:
             if ev.is_final and ev.transcript and ev.transcript.strip():
+                # With auto-detection, follow the detected language; when locked,
+                # the session's language stands (relay.language)
                 spoken = lang.normalize(ev.language)
-                if spoken:
+                if spoken and settings.stt_language == "auto":
                     relay.language = spoken
                 logger.info(f"[STT Final] User ({session_id}, {ev.language}): {ev.transcript}")
 
@@ -389,6 +419,25 @@ async def entrypoint(ctx: JobContext) -> None:
                 asyncio.create_task(run_actions(monitor.participant_joined(time.time())))
 
         ctx.room.on("participant_disconnected", on_participant_disconnected)
+
+        async def switch_language(code: str) -> None:
+            voice.switch_to(code)
+            text = lang.SWITCHED[code]
+            logger.info(f"[VOICE] {session_id}: learner switched to {code}")
+            await _record_line(redis, session_id, text)
+            session.say(text, allow_interruptions=settings.allow_interruptions)
+
+        def on_data(packet: rtc.DataPacket) -> None:
+            # Language buttons in the room (frontend: LANGUAGE_TOPIC)
+            if packet.topic != LANGUAGE_TOPIC:
+                return
+            if packet.participant is None or packet.participant.identity != candidate_identity:
+                return
+            code = lang.normalize(packet.data.decode(errors="ignore"))
+            if code and code != relay.language:
+                asyncio.create_task(switch_language(code))
+
+        ctx.room.on("data_received", on_data)
         ctx.room.on("participant_connected", on_participant_connected)
 
         # BeyondPresence video avatar (identity must contain 'bey'/'avatar' for the

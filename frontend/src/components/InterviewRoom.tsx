@@ -5,6 +5,7 @@
 
 import { useCallback, useState } from 'react';
 import { ConfirmEndDialog } from './ConfirmEndDialog';
+import type { BuddyLanguage } from '../types';
 import {
   LiveKitRoom,
   RoomAudioRenderer,
@@ -29,7 +30,16 @@ const MIC_OPTIONS: AudioCaptureOptions = {
   voiceIsolation: true,
 };
 
+/** Data topic the voice agent listens on (avatar/agents/entrypoint.py LANGUAGE_TOPIC). */
+const LANGUAGE_TOPIC = 'buddy-language';
+const LANGUAGE_LABELS: { code: BuddyLanguage; label: string }[] = [
+  { code: 'ml-IN', label: 'മല' },
+  { code: 'te-IN', label: 'తెలు' },
+  { code: 'en-IN', label: 'EN' },
+];
+
 interface InterviewRoomProps {
+  language: BuddyLanguage;
   serverUrl: string;
   token: string;
   sessionId: string;
@@ -37,7 +47,7 @@ interface InterviewRoomProps {
   onEnd: () => void;
 }
 
-export function InterviewRoom({ serverUrl, token, onDisconnect, onEnd }: InterviewRoomProps) {
+export function InterviewRoom({ serverUrl, token, language, onDisconnect, onEnd }: InterviewRoomProps) {
   const handleDisconnected = useCallback(() => {
     onDisconnect();
   }, [onDisconnect]);
@@ -52,7 +62,7 @@ export function InterviewRoom({ serverUrl, token, onDisconnect, onEnd }: Intervi
       onDisconnected={handleDisconnected}
       className="h-screen w-screen bg-black overflow-hidden"
     >
-      <InterviewContent onEnd={onEnd} />
+      <InterviewContent onEnd={onEnd} startLanguage={language} />
       <RoomAudioRenderer />
     </LiveKitRoom>
   );
@@ -107,7 +117,8 @@ function ControlButton({
   );
 }
 
-function InterviewContent({ onEnd }: { onEnd: () => void }) {
+function InterviewContent({ onEnd, startLanguage }: { onEnd: () => void; startLanguage: BuddyLanguage }) {
+  const [language, setLanguage] = useState<BuddyLanguage>(startLanguage);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [ending, setEnding] = useState(false);
   const { localParticipant } = useLocalParticipant();
@@ -171,6 +182,29 @@ function InterviewContent({ onEnd }: { onEnd: () => void }) {
       {/* Bottom Control Bar */}
       <div className="control-bar">
         <div className="control-bar-left">
+          {/* Switch language mid-session: the buddy confirms in the new language */}
+          <div role="radiogroup" aria-label="Language" style={{ display: 'flex', gap: 4 }}>
+            {LANGUAGE_LABELS.map((l) => (
+              <button
+                key={l.code}
+                role="radio"
+                aria-checked={language === l.code}
+                title={`Switch to ${l.code}`}
+                className={`control-button ${language === l.code ? '' : 'inactive'}`}
+                style={{ width: 'auto', padding: '0 10px', fontSize: 14 }}
+                onClick={async () => {
+                  if (!localParticipant || l.code === language) return;
+                  await localParticipant.publishData(new TextEncoder().encode(l.code), {
+                    reliable: true,
+                    topic: LANGUAGE_TOPIC,
+                  });
+                  setLanguage(l.code);
+                }}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
           {/* Microphone Button */}
           <ControlButton
             icon={

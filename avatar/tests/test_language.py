@@ -14,6 +14,8 @@ def test_language_of_a_reply_follows_its_script():
     # Mostly Telugu with an English term stays Telugu
     assert lang.language_of("chlorophyll అనే ఆకుపచ్చ రంగు") == "te-IN"
     assert lang.language_of("...", default="ml-IN") == "ml-IN"  # no letters: keep current
+    # Another Indian script (Telugu speech misheard as Kannada): current voice, never English
+    assert lang.language_of("ನ್ಯೂರೋ ಸರ್ವ ಡೆವಲಪ್ಮೆಂಟ್", default="te-IN") == "te-IN"
 
 
 def test_speech_recognition_codes_are_normalised():
@@ -41,19 +43,53 @@ async def test_turns_carry_the_spoken_language(redis):
     assert entries[1]["language"] == "te-IN"
 
 
+from livekit.plugins import sarvam  # noqa: E402
+
+
+class FakeSarvamTTS(sarvam.TTS):
+    def __init__(self):  # no network, no API key
+        self.updates = []
+
+    def update_options(self, **kw):
+        self.updates.append(kw["target_language_code"])
+
+
+class FakeSarvamSTT(sarvam.STTRealtime):
+    def __init__(self):
+        self.updates = []
+
+    def update_options(self, **kw):
+        self.updates.append(kw["language"])
+
+
 def test_voice_switches_language_before_a_line():
-    from livekit.plugins import sarvam
-
-    class FakeSarvamTTS(sarvam.TTS):
-        def __init__(self):  # no network, no API key
-            self.updates = []
-
-        def update_options(self, **kw):
-            self.updates.append(kw["target_language_code"])
-
     tts = FakeSarvamTTS()
     voice = BuddyVoice(tts, "ml-IN")
     voice.prepare("ഹായ്! ഇന്ന് നമുക്ക് എന്ത് പഠിക്കാം?")  # same language: no change
     voice.prepare("సరే, తెలుగులో చెప్తాను")
     voice.prepare("Okay, English it is!")
     assert tts.updates == ["te-IN", "en-IN"] and voice.language == "en-IN"
+
+
+class _Relay:
+    language = "te-IN"
+
+
+def test_recognition_follows_the_buddy_into_another_indian_language():
+    tts, stt, relay = FakeSarvamTTS(), FakeSarvamSTT(), _Relay()
+    voice = BuddyVoice(tts, "te-IN", stt=stt, relay=relay)
+    voice.prepare("Sure, a quick English word: photosynthesis.")  # English: listening stays Telugu
+    assert stt.updates == [] and relay.language == "te-IN"
+    voice.prepare("ശരി, ഇനി മലയാളത്തിൽ പറയാം.")  # learner asked for Malayalam
+    assert stt.updates == ["ml-IN"] and relay.language == "ml-IN"
+
+
+def test_language_buttons_switch_listening_and_voice():
+    tts, stt, relay = FakeSarvamTTS(), FakeSarvamSTT(), _Relay()
+    voice = BuddyVoice(tts, "te-IN", stt=stt, relay=relay)
+    voice.switch_to("en-IN")
+    assert (stt.updates, tts.updates, relay.language, voice.language) == (
+        ["en-IN"], ["en-IN"], "en-IN", "en-IN"
+    )
+    assert lang.language_of(lang.SWITCHED["ml-IN"]) == "ml-IN"
+    assert lang.language_of(lang.SWITCHED["te-IN"]) == "te-IN"

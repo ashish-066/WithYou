@@ -13,6 +13,7 @@ from redis.asyncio import Redis
 
 from brain import interview_flow
 from brain.graph import create_interview_graph
+from brain.language_switch import requested_language
 from brain.services.reply_publisher import (
     ReplyPublisher,
     bind_reply_publisher,
@@ -187,6 +188,11 @@ class MessageProcessor:
                 spoken = message.raw_data.get("language")
                 if spoken in SUPPORTED_LANGUAGES:
                     state["language"] = spoken
+                # ...unless they ask to change it ("మలయాళంలో చెప్పు", "speak English")
+                asked = requested_language(message.content, state.get("language"))
+                if asked:
+                    logger.info(f"Learner asked to switch {session_id} to {asked}")
+                    state["language"] = asked
                 decision = interview_flow.before_candidate_turn(state, message.content, now)
                 state["flow"] = decision.flow
             elif message.message_type == "question_unanswered":

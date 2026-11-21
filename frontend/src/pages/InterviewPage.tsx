@@ -73,6 +73,7 @@ export function InterviewPage() {
         serverUrl={callData.livekit_url}
         token={callData.livekit_token}
         sessionId={callData.session_id}
+        language={language}
         onDisconnect={endCurrentCall}
         onEnd={endCurrentCall}
       />

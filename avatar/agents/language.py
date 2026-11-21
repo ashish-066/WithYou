@@ -1,8 +1,10 @@
 """Which language the buddy speaks: Malayalam, Telugu or English.
 
-The learner can switch at any time. Speech recognition (Sarvam, language=auto)
-reports the language of each turn; the brain answers in it; and the voice picks
-the language of each reply from its script, so it always matches the words.
+Speech recognition is locked to the session's language (Sarvam's "auto" mode
+heard Telugu as Kannada on a real mic). The learner switches with the language
+buttons in the room, or by asking the buddy: when a reply comes in another
+supported language, recognition follows it. The voice speaks each line in the
+language of its script.
 """
 
 from __future__ import annotations
@@ -40,6 +42,14 @@ NUDGES = {
 }
 
 
+# Said when the learner switches with the language buttons
+SWITCHED = {
+    "ml-IN": "ശരി, ഇനി നമുക്ക് മലയാളത്തിൽ സംസാരിക്കാം!",
+    "te-IN": "సరే, ఇప్పుడు తెలుగులో మాట్లాడుకుందాం!",
+    "en-IN": "Sure, let's switch to English!",
+}
+
+
 def normalize(code: object | None) -> str | None:
     """A speech-recognition language ("te", "te-IN", "ml-in") as one of SUPPORTED."""
     if not code:
@@ -48,12 +58,23 @@ def normalize(code: object | None) -> str | None:
     return next((lang for lang in SUPPORTED if lang.lower().startswith(prefix + "-")), None)
 
 
+# All Indian scripts (Devanagari .. Malayalam), for text in one we don't speak
+_INDIC = range(0x0900, 0x0D80)
+
+
 def language_of(text: str, default: str = "en-IN") -> str:
-    """The language to speak `text` in, from its script (Latin-only text is English)."""
+    """The language to speak `text` in, from its script.
+
+    Telugu/Malayalam script -> that language; Latin-only -> English; another
+    Indian script (e.g. Kannada from a misheard turn) or no letters -> `default`
+    (the current language), never the English voice.
+    """
     counts = {lang: sum(1 for ch in text if ord(ch) in block) for lang, block in _SCRIPTS.items()}
     lang, n = max(counts.items(), key=lambda kv: kv[1])
     if n:
         return lang
+    if any(ord(ch) in _INDIC for ch in text):
+        return default
     return "en-IN" if any(ch.isalpha() for ch in text) else default
 
 

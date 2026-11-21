@@ -85,7 +85,9 @@ class Settings(BaseSettings):
     deepgram_tts_model: str = "aura-2-thalia-en"
     # Speech: "sarvam" (Malayalam/Telugu/English) or "deepgram" (English-only fallback)
     voice_provider: str = "sarvam"
-    stt_language: str = "auto"  # Sarvam realtime STT: detects the language per utterance
+    # Sarvam realtime STT language: "session" = the session's language (switchable
+    # live), or "auto" (per-utterance detection: heard Telugu as Kannada on a mic)
+    stt_language: str = "session"
     tts_model: str = "bulbul:v3"
     tts_speaker: str = "kavya"
     # Can the learner cut the buddy off mid-sentence? Off: the buddy's own voice
