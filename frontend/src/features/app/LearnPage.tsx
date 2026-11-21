@@ -61,7 +61,7 @@ export function LearnPage() {
       </div>
 
       <form onSubmit={onSubmit} className="space-y-3">
-        <label className="sketch flex h-14 items-center gap-3 bg-surface px-4">
+        <label className="sketch flex h-14 items-center gap-3 bg-surface px-4 focus-within:ring-2 focus-within:ring-accent/40">
           <Search size={20} aria-hidden className="shrink-0 text-muted" />
           <input
             autoFocus
@@ -70,7 +70,7 @@ export function LearnPage() {
             placeholder={t.learnPlaceholder}
             maxLength={120}
             aria-label={t.learnTitle}
-            className="h-full min-w-0 flex-1 bg-transparent text-lead text-ink outline-none placeholder:text-muted"
+            className="h-full min-w-0 flex-1 bg-transparent text-lead text-ink outline-none placeholder:text-muted focus-visible:!outline-none"
           />
         </label>
         <button
