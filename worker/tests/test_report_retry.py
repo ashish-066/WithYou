@@ -1,6 +1,7 @@
 """A failed report is written again: fast-model fallback, automatic retries,
 and retries for interviews whose live state is gone."""
 
+import json
 from datetime import UTC, datetime, timedelta
 
 from alex_db import Interview, session_scope
@@ -39,11 +40,29 @@ def pool(monkeypatch, slow, fast):
     monkeypatch.setattr(report_generator, "get_llm_pool", get)
 
 
-async def test_report_falls_back_to_the_fast_model(monkeypatch):
-    slow, fast = Client(RuntimeError("quota")), Client(REPORT)
+async def test_recap_falls_back_to_the_other_model(monkeypatch):
+    slow, fast = Client(REPORT), Client(RuntimeError("quota"))
     pool(monkeypatch, slow, fast)
     out = await report_generator.generate_descriptive_report({"session_id": "s", "messages": []})
-    assert out.success and out.data["summary"] == "Short interview." and fast.calls == 1
+    assert out.success and out.data["summary"] == "Short interview." and slow.calls == 1
+
+
+async def test_recap_without_any_model_is_built_from_the_understanding_map(monkeypatch):
+    pool(monkeypatch, Client(RuntimeError("down")), Client(RuntimeError("down")))
+    state = {
+        "session_id": "s", "messages": [], "language": "te-IN",
+        "understanding": {"topic": "photosynthesis", "points": [
+            {"id": "p1", "text": "మొక్కలు సూర్యరశ్మితో ఆహారం తయారు చేస్తాయి", "status": "understood", "struggled": True},
+            {"id": "p2", "text": "ఆక్సిజన్ విడుదల అవుతుంది", "status": "partial", "struggled": True},
+        ]},
+    }
+    out = await report_generator.generate_descriptive_report(state)
+    recap = out.data
+    assert out.success and out.source == "fallback" and recap["language"] == "te-IN"
+    assert recap["covered"] == ["మొక్కలు సూర్యరశ్మితో ఆహారం తయారు చేస్తాయి"]
+    assert len(recap["improved"]) == 1 and "ఆక్సిజన్" in recap["next_time"]
+    text = json.dumps(recap, ensure_ascii=False).lower()
+    assert not any(w in text for w in ("score", "grade", "%", "fail"))
 
 
 async def test_retry_writes_the_report_from_postgres_when_live_state_is_gone(db, redis, monkeypatch):

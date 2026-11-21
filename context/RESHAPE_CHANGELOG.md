@@ -203,3 +203,17 @@ Ashish is away and asked me to keep going phase by phase and test everything tog
   - use normal Wi-Fi (IPv4) for the laptop
   - or turn IPv6 off on that interface while demoing (`networksetup -setv6off "<service>"`, back with `-setv6automatic`)
   - or host the agent somewhere with IPv4
+
+## Phase 5: Recap, session memory, warmth, demo-proofing ✅ (automated); rehearsal pending
+- **Kind recap card** (the report writer, reskinned, `worker/brain/tools/slow/report_generator.py`): the same entry points, so the conclude node, retry sweep, Postgres save and report requests all keep working.
+  - `generate_descriptive_report` → `{title, summary, covered, improved, next_time, language}`, written warmly to the learner in the session language, from the understanding map + full transcript. No scores; doesn't invent progress; shaky ideas become "next time".
+  - Model: fast pool first (Sarvam), slow as fallback. **With no model at all, a plain recap is built from the map** in te/ml/en.
+  - `generate_analytics_report` → the map's ideas/status and "clicked after a struggle" (no model call).
+  - All old interview-report prompts are gone.
+- **API** `GET /calls/recap/{session_id}` → pending/ready/failed + recap (live state, else Postgres); owner-only; test added.
+- **Frontend:** the finish screen shows the `RecapCard` (polls until the brain has written it), with labels in ml/te/en.
+- **Session memory:** the reply prompt gets `<session_memory>`: ideas that were hard and then clicked ("celebrate!"), and ones still in progress ("be encouraging"). The buddy calls back to them only to cheer or encourage.
+- **Real brain (Telugu):** goodbye + recap in 0.7 s; the recap is accurate (photosynthesis + chlorophyll covered; "next time: carbon dioxide and water", the idea still open), warm, and has no scores.
+- **Demo kit** `context/DEMO.md`: how to run (incl. phone via cloudflared), 3 tested topics, the 3-minute pitch, a fallback table (IPv6 hotspot, `VOICE_PROVIDER=deepgram`, `FAST_LLM_PROVIDER=gemini`, noisy hall, avatar, backup clip), and the pre-stage checklist.
+- **Tests:** worker **114 passed** (+ recap fallback in Telugu with no score words, session memory), avatar **58 passed** (+ recap endpoint), frontend build + PWA check OK.
+- **[ASK ASHISH] pending for all phases together:** phone session over the demo network, Telugu wording check, 3-minute rehearsal, backup clip.

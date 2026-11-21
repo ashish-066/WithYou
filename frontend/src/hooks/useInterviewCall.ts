@@ -10,6 +10,8 @@ interface UseInterviewCallReturn {
   state: InterviewState;
   callData: CallResponse | null;
   error: string | null;
+  /** The session that just ended (its recap is shown on the finish screen) */
+  endedSessionId: string | null;
   startCall: (learnerName: string, language: BuddyLanguage) => Promise<void>;
   endCurrentCall: () => Promise<void>;
 }
@@ -18,6 +20,7 @@ export function useInterviewCall(): UseInterviewCallReturn {
   const [state, setState] = useState<InterviewState>('idle');
   const [callData, setCallData] = useState<CallResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [endedSessionId, setEndedSessionId] = useState<string | null>(null);
 
   const startCall = useCallback(async (learnerName: string, language: BuddyLanguage) => {
     setState('connecting');
@@ -40,9 +43,10 @@ export function useInterviewCall(): UseInterviewCallReturn {
         console.warn('Error ending call:', err);
       }
     }
+    setEndedSessionId(callData?.session_id ?? null);
     setCallData(null);
     setState('ended');
   }, [callData]);
 
-  return { state, callData, error, startCall, endCurrentCall };
+  return { state, callData, error, endedSessionId, startCall, endCurrentCall };
 }

@@ -9,10 +9,11 @@ import { useInterviewCall } from '@/hooks/useInterviewCall';
 import type { BuddyLanguage } from '@/types';
 import { cx } from '@/ui/cx';
 import { LANGUAGES, labels, saveLanguage, savedLanguage } from './labels';
+import { RecapCard } from './RecapCard';
 import { StudyRoom } from './StudyRoom';
 
 export function StudyPage() {
-  const { state, callData, error, startCall, endCurrentCall } = useInterviewCall();
+  const { state, callData, error, endedSessionId, startCall, endCurrentCall } = useInterviewCall();
   const { user } = useAuth();
   const [language, setLanguage] = useState<BuddyLanguage>(savedLanguage);
   const t = labels(language);
@@ -42,6 +43,8 @@ export function StudyPage() {
           <h1 className="mt-5 font-display text-h1">{ended ? t.finished : name ? t.hi(name) : t.appName}</h1>
           <p className="mt-2 text-lead text-muted">{ended ? t.finishedBody : t.tagline}</p>
         </div>
+
+        {ended && endedSessionId && <RecapCard sessionId={endedSessionId} language={language} />}
 
         <fieldset>
           <legend className="text-meta text-muted">{t.pickLanguage}</legend>

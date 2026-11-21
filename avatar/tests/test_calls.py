@@ -102,3 +102,21 @@ async def test_progress_shows_topic_and_ideas_to_the_owner_only(client, redis):
     async with fresh_client(client) as other:
         await signup(other, org="Globex", email="b@globex.test")
         assert (await other.get(f"/calls/{call['call_id']}/progress")).status_code == 404
+
+
+async def test_recap_is_pending_then_ready_for_the_owner_only(client, redis):
+    import json
+
+    from api_helpers import fresh_client
+
+    _, call = await start_call(client)
+    sid = call["session_id"]
+    assert (await client.get(f"/calls/recap/{sid}")).json() == {"status": "pending", "recap": None}
+    recap = {"title": "ఈ రోజు మనం నేర్చుకున్నది", "summary": "బాగా చేశావు!", "covered": ["photosynthesis"],
+             "improved": [], "next_time": "", "language": "te-IN"}
+    await redis.hset(f"context:{sid}", mapping={"descriptive_report": json.dumps(recap), "report_status": "completed"})
+    body = (await client.get(f"/calls/recap/{sid}")).json()
+    assert body["status"] == "ready" and body["recap"]["summary"] == "బాగా చేశావు!"
+    async with fresh_client(client) as other:
+        await signup(other, org="Globex", email="b@globex.test")
+        assert (await other.get(f"/calls/recap/{sid}")).status_code == 404

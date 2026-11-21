@@ -20,6 +20,7 @@ from api.schemas import (
 )
 from core.auth import AuthStore, User, ensure_session_user_access, require_user
 from core.config import settings
+from core.interviews import get_interview
 from core.rate_limit import rate_limit
 from core.redis import get_redis_client
 from services import active_calls
@@ -127,6 +128,35 @@ async def get_call_status(call_id: str, user: User = Depends(require_user)) -> C
         participant_count=participant_count,
         created_at=call.get("created_at"),
     )
+
+
+@router.get("/recap/{session_id}")
+async def get_recap(session_id: str, user: User = Depends(require_user)) -> dict:
+    """The learner's end-of-session recap card (written by the brain after the goodbye).
+
+    {"status": "pending" | "ready", "recap": {...} | None}. Read from the live
+    session state, else from Postgres once the session has been saved.
+    """
+    await ensure_session_user_access(session_id, user)
+    redis = get_redis_client()
+    try:
+        raw, status = await redis.hmget(
+            f"{settings.context_prefix}:{session_id}", "descriptive_report", "report_status"
+        )
+    finally:
+        await redis.aclose()
+    recap = None
+    if raw:
+        try:
+            recap = json.loads(raw)
+        except ValueError:
+            recap = None
+    if not recap:
+        row = await get_interview(session_id)
+        recap = (row.report if row is not None else None) or None
+    if recap and recap.get("summary"):
+        return {"status": "ready", "recap": recap}
+    return {"status": "failed" if status == "failed" else "pending", "recap": None}
 
 
 @router.get("/{call_id}/progress")

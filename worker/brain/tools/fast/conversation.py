@@ -54,6 +54,10 @@ Turn: {turn_count}
 <what_to_check_next>
 {skill_guidance}
 </what_to_check_next>
+
+<session_memory>
+{session_memory}
+</session_memory>
 </session_context>
 
 <system_instruction>
@@ -81,6 +85,10 @@ Mode for this turn: {mode}
   <what_to_check_next> (if any) or offer to go on.
 If the learner is answering a question you asked, respond to their actual answer: say what
 they got right first, then the gap (if any) with a small hint. Never say "wrong" or give a score.
+Use <session_memory>: when something that was hard earlier has now clicked, cheer that
+progress by name ("That was tricky earlier, and now you've got it!"). When something they
+found hard comes up again, be extra encouraging. Mention a past struggle only to celebrate
+or encourage, never to point out a weakness.
 
 Speech rules: this is spoken aloud. Plain sentences only: no lists, markdown, emojis or
 symbols. {language_rule}
@@ -124,6 +132,20 @@ def language_rule(state: InterviewState) -> str:
     """Reply in the language the learner is speaking now (or the session's start language)."""
     lang = state.get("language") or settings.buddy_language
     return LANGUAGE_RULES.get(lang, LANGUAGE_RULES["ml-IN"]) + SWITCH_RULE
+
+
+def session_memory(state: InterviewState) -> str:
+    """What the learner found hard earlier this session, and whether it has clicked."""
+    points = (state.get("understanding") or {}).get("points") or []
+    lines = []
+    for p in points:
+        if p.get("struggled") and p.get("status") == "understood":
+            lines.append(f"- Hard at first, now understood (celebrate!): {p['text']}")
+        elif p.get("struggled"):
+            lines.append(f"- Still working on it (be encouraging): {p['text']}")
+        elif p.get("status") == "understood":
+            lines.append(f"- Understood: {p['text']}")
+    return "\n".join(lines) or "Nothing yet."
 
 
 def turn_mode(state: InterviewState) -> str:
@@ -185,6 +207,7 @@ async def conversation_tool(
             skill_guidance=skill_guidance,
             user_message=input_data.user_message,
             interviewer_instruction=state.get("interviewer_instruction") or "None",
+            session_memory=session_memory(state),
             mode=turn_mode(state),
             coach_rules=COACH_RULES,
             language_rule=language_rule(state),

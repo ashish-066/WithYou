@@ -128,3 +128,13 @@ async def test_processor_round_trip_keeps_the_map_and_coaches_answers(redis, mon
     # A request (not an answer) is not coached, even while a question is open
     await p.process(StreamMessage("2-0", "s", "u1", "candidate_response", "quiz me", "", {}))
     assert seen[-1]["answering_check"] is False and seen[-1]["interviewer_instruction"] == ""
+
+
+def test_session_memory_reaches_the_prompt_for_callbacks():
+    m = fresh_map()
+    m["points"][0].update(status="understood", struggled=True)
+    m["points"][1].update(status="partial", struggled=True)
+    memory = conversation.session_memory({"understanding": m})
+    assert "Hard at first, now understood (celebrate!): Plants make food from sunlight" in memory
+    assert "Still working on it (be encouraging): Chlorophyll" in memory
+    assert conversation.session_memory({}) == "Nothing yet."

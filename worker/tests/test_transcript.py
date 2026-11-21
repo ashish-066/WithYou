@@ -130,10 +130,10 @@ def test_report_prompt_without_transcript_falls_back_and_long_ones_are_trimmed()
     from brain.tools.slow import report_generator
 
     state = {"messages": [{"role": "user", "content": "recent"}]}
-    assert report_generator._build_report_prompt_data(state)["conversation_summary"] == "Candidate: recent"
+    assert report_generator._build_report_prompt_data(state)["conversation_summary"] == "Learner: recent"
 
     huge = [{"role": "user", "content": f"turn {i} " + "y" * 1500} for i in range(100)]
     convo = report_generator._format_conversation(huge)
     assert len(convo) <= report_generator.MAX_CONVERSATION_CHARS + 100
-    assert convo.startswith("Candidate: turn 0 ") and "turn 99 " in convo
+    assert convo.startswith("Learner: turn 0 ") and "turn 99 " in convo
     assert "messages left out for length" in convo

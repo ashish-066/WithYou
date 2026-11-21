@@ -74,6 +74,22 @@ export async function getProgress(callId: string): Promise<Progress> {
   return response.json();
 }
 
+export interface Recap {
+  title: string;
+  summary: string;
+  covered: string[];
+  improved: string[];
+  next_time: string;
+  language?: string;
+}
+
+/** The end-of-session recap card ("pending" while the buddy is still writing it). */
+export async function getRecap(sessionId: string): Promise<{ status: 'pending' | 'ready' | 'failed'; recap: Recap | null }> {
+  const response = await fetch(`${API_BASE}/calls/recap/${encodeURIComponent(sessionId)}`);
+  if (!response.ok) throw new Error(`Failed to get recap: ${response.status}`);
+  return response.json();
+}
+
 /**
  * Health check for the API.
  */
