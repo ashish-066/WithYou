@@ -65,6 +65,7 @@ export type Strings = {
   privateNote: string;
   helpNudge: string;
   heroAsk: string;
+  styles: { learn: string; learnHint: string; teach: string; teachHint: string; teachStart: string; teachPage: string };
   page: { title: string; body: string; take: string; reading: string; found: string; start: string; retake: string };
   streakLine: (days: number, week: number, concepts: number) => string;
   noteNext: string;
@@ -131,6 +132,14 @@ const en: Strings = {
   learningTitle: 'Learning level',
   privateNote: "Only you can see this. It's your buddy's gentle read, not a diagnosis.",
   heroAsk: 'What shall we do today?',
+  styles: {
+    learn: 'Learn it',
+    learnHint: 'I explain simply and ask small questions.',
+    teach: 'Test your knowledge',
+    teachHint: "You're the teacher. Explain it to me and I'll ask \"but why?\"",
+    teachStart: 'Start teaching',
+    teachPage: 'Test me on this page',
+  },
   page: {
     title: 'Study a page from your book',
     body: "Take a photo of a textbook page. I'll read it and we'll go through it together.",
@@ -218,6 +227,14 @@ const te: Strings = {
   learningTitle: 'నేర్చుకునే స్థాయి',
   privateNote: 'ఇది నీకు మాత్రమే కనిపిస్తుంది. ఇది నీ బడ్డీ అభిప్రాయం మాత్రమే, డయాగ్నోసిస్ కాదు.',
   heroAsk: 'ఈ రోజు ఏం చేద్దాం?',
+  styles: {
+    learn: 'నేర్చుకో',
+    learnHint: 'నేను సింపుల్ గా చెప్పి, చిన్న ప్రశ్నలు అడుగుతా.',
+    teach: 'నీ నాలెడ్జ్ టెస్ట్ చేసుకో',
+    teachHint: 'నువ్వే టీచర్. నాకు చెప్పు, నేను "ఎందుకు?" అని అడుగుతా.',
+    teachStart: 'చెప్పడం మొదలుపెట్టు',
+    teachPage: 'ఈ పేజీపై నన్ను టెస్ట్ చేయి',
+  },
   page: {
     title: 'నీ బుక్ లోని పేజీ చదువుదాం',
     body: 'టెక్స్ట్ బుక్ పేజీ ఫోటో తీయి. నేను చదివి, మనిద్దరం కలిసి అర్థం చేసుకుందాం.',
@@ -305,6 +322,14 @@ const ml: Strings = {
   learningTitle: 'പഠന നില',
   privateNote: 'ഇത് നിനക്ക് മാത്രമേ കാണാനാകൂ. ഇത് കൂട്ടുകാരന്റെ ഒരു തോന്നൽ മാത്രം, രോഗനിർണയമല്ല.',
   heroAsk: 'ഇന്ന് എന്താ ചെയ്യേണ്ടത്?',
+  styles: {
+    learn: 'പഠിക്കാം',
+    learnHint: 'ഞാൻ ലളിതമായി പറഞ്ഞ് ചെറിയ ചോദ്യങ്ങൾ ചോദിക്കും.',
+    teach: 'നിന്റെ അറിവ് പരീക്ഷിക്ക്',
+    teachHint: 'നീയാണ് ടീച്ചർ. എനിക്ക് പറഞ്ഞു താ, ഞാൻ "എന്തുകൊണ്ട്?" എന്ന് ചോദിക്കും.',
+    teachStart: 'പഠിപ്പിച്ചു തുടങ്ങ്',
+    teachPage: 'ഈ പേജിൽ എന്നെ ടെസ്റ്റ് ചെയ്യ്',
+  },
   page: {
     title: 'നിന്റെ പുസ്തകത്തിലെ ഒരു പേജ് പഠിക്കാം',
     body: 'ടെക്സ്റ്റ്ബുക്ക് പേജിന്റെ ഫോട്ടോ എടുക്ക്. ഞാൻ വായിച്ചിട്ട് നമുക്ക് ഒരുമിച്ച് പഠിക്കാം.',

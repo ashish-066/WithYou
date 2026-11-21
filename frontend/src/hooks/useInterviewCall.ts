@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import type { BuddyLanguage, CallResponse, InterviewState, SessionMode } from '../types';
+import type { BuddyLanguage, CallResponse, InterviewState, SessionMode, StudyStyle } from '../types';
 import { createCall, endCall } from '../services/api';
 
 interface UseInterviewCallReturn {
@@ -19,6 +19,7 @@ interface UseInterviewCallReturn {
     topic?: string,
     voice?: 'kavya' | 'shubh',
     pageId?: string,
+    style?: StudyStyle,
   ) => Promise<void>;
   endCurrentCall: () => Promise<void>;
 }
@@ -30,11 +31,11 @@ export function useInterviewCall(): UseInterviewCallReturn {
   const [endedSessionId, setEndedSessionId] = useState<string | null>(null);
 
   const startCall = useCallback(
-    async (learnerName: string, language: BuddyLanguage, mode: SessionMode, topic?: string, voice?: 'kavya' | 'shubh', pageId?: string) => {
+    async (learnerName: string, language: BuddyLanguage, mode: SessionMode, topic?: string, voice?: 'kavya' | 'shubh', pageId?: string, style?: StudyStyle) => {
     setState('connecting');
     setError(null);
     try {
-      const response = await createCall({ candidate_name: learnerName, language, mode, topic, voice, page_id: pageId });
+      const response = await createCall({ candidate_name: learnerName, language, mode, topic, voice, page_id: pageId, style });
       setCallData(response);
       setState('connected');
     } catch (err) {

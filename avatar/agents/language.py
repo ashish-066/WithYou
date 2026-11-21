@@ -99,7 +99,23 @@ def language_of(text: str, default: str = "en-IN") -> str:
     return "en-IN" if any(ch.isalpha() for ch in text) else default
 
 
-def greeting(language: str | None, mode: str | None = None, topic: str | None = None) -> str:
+TEACH_GREETINGS = {
+    "ml-IN": "ഹായ്! ഇന്ന് നീയാണ് ടീച്ചർ. എനിക്ക് {topic} ഒട്ടും അറിയില്ല. എനിക്ക് ഒന്ന് പറഞ്ഞു തരാമോ?",
+    "te-IN": "హాయ్! ఈ రోజు నువ్వే టీచర్. నాకు {topic} అస్సలు తెలీదు. నాకు కొంచెం చెప్తావా?",
+    "en-IN": "Hey! Today you're the teacher. I don't know anything about {topic}. Can you explain it to me?",
+}
+TEACH_GREETINGS_NO_TOPIC = {
+    "ml-IN": "ഹായ്! ഇന്ന് നീയാണ് ടീച്ചർ. ഏത് ടോപിക് ആണ് എന്നെ പഠിപ്പിക്കുന്നത്?",
+    "te-IN": "హాయ్! ఈ రోజు నువ్వే టీచర్. నాకు ఏ టాపిక్ నేర్పిస్తావు?",
+    "en-IN": "Hey! Today you're the teacher. Which topic will you teach me?",
+}
+
+
+def greeting(language: str | None, mode: str | None = None, topic: str | None = None, style: str | None = None) -> str:
+    if mode != "talk" and style == "teach":
+        if topic:
+            return TEACH_GREETINGS.get(language or "", TEACH_GREETINGS["ml-IN"]).format(topic=topic)
+        return TEACH_GREETINGS_NO_TOPIC.get(language or "", TEACH_GREETINGS_NO_TOPIC["ml-IN"])
     if topic:
         lines = TALK_MOOD_GREETINGS if mode == "talk" else TOPIC_GREETINGS
         return lines.get(language or "", lines["ml-IN"]).format(topic=topic)

@@ -124,6 +124,8 @@ class MessageProcessor:
                     state["language"] = raw_data["language"]
                 if raw_data.get("mode") in talk.MODES:
                     state["session_mode"] = raw_data["mode"]
+                if raw_data.get("style") == "teach":
+                    state["study_style"] = "teach"  # test your knowledge: the learner teaches
                 # A topic picked on the start screen: plan its key ideas now (the
                 # learner is still hearing the greeting), so checks can start at once
                 topic = str(raw_data.get("topic") or "").strip()
@@ -238,7 +240,14 @@ class MessageProcessor:
                     decision.instruction = talk.TALK_INSTRUCTIONS[key]
             if message.message_type == "candidate_response" and not talking and not (decision and decision.instruction):
                 intent = run_prefilter({**state, "current_input": message.content})
-                if understanding.answering_a_check(state) and understanding.is_answer(
+                if state.get("study_style") == "teach":
+                    # Test your knowledge: every real explanation is assessed (ideas they
+                    # teach well turn green); the buddy's own questions follow teach_block
+                    state["answering_check"] = (
+                        understanding.is_answer(intent.classification, intent.confidence)
+                        and len(message.content.split()) >= 4
+                    )
+                elif understanding.answering_a_check(state) and understanding.is_answer(
                     intent.classification, intent.confidence
                 ):
                     state["answering_check"] = True

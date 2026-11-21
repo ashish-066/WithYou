@@ -15,6 +15,7 @@ export interface CallResponse {
 export type BuddyLanguage = 'ml-IN' | 'te-IN' | 'en-IN';
 
 /** Study (teach + gentle checks) or just talk (a warm listener). */
+export type StudyStyle = 'learn' | 'teach';
 export type SessionMode = 'study' | 'talk';
 
 export interface CreateCallRequest {
@@ -23,6 +24,7 @@ export interface CreateCallRequest {
   mode: SessionMode;
   topic?: string;
   page_id?: string;
+  style?: StudyStyle;
   voice?: 'kavya' | 'shubh';
 }
 

@@ -5,7 +5,7 @@
  */
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Camera, RotateCcw } from 'lucide-react';
+import { ArrowRight, Camera, GraduationCap, RotateCcw } from 'lucide-react';
 
 import { readPage, type ReadPage } from '@/services/api';
 import { Buddy } from './Buddy';
@@ -85,6 +85,13 @@ export function PagePhoto() {
           >
             {t.start}
             <ArrowRight size={18} aria-hidden />
+          </button>
+          <button
+            onClick={() => navigate(sessionUrl('study', page.topic, page.page_id, 'teach'))}
+            className="sketch-soft mt-2 inline-flex h-12 w-full items-center justify-center gap-2 bg-surface text-lead font-semibold text-ink"
+          >
+            <GraduationCap size={18} aria-hidden />
+            {strings(language).styles.teachPage}
           </button>
           <button
             onClick={() => input.current?.click()}

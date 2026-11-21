@@ -335,3 +335,9 @@ Next:
 - The page is kept in Redis for 24 h under `page:{user}:{id}`, readable only by its owner. `POST /calls/` with `page_id` sends it in `system_init`; the worker uses the page's ideas as the session plan (no planning call) and puts the page text in the buddy's prompt ("your book says…").
 - Config: `GOOGLE_API_KEY` added to `avatar/.env` (same key as the worker), `PAGE_MODELS`.
 - Tested: unit tests (worker 138, API 69 passing); live Gemini read in Telugu and Malayalam; end-to-end upload in the app (screenshots). Not yet tested: a full voice session started from a page.
+
+## Feature: Test your knowledge (you teach the buddy)
+- Learn has a switch: "Learn it" (the buddy teaches) or "Test your knowledge" (the student teaches, the buddy is a curious younger student). A photographed page also offers "Test me on this page".
+- `style: learn|teach` goes from `POST /calls/` → saved call (agent greeting: "Today you're the teacher…", in ml/te/en) → `system_init` → worker `study_style`.
+- Worker: reply mode "student"; the role swap goes in the prompt's `<system_instruction>` slot (it lost to the "explain" rule when it sat in session memory, seen live: the buddy explained). Safety, goodbye and follow-up instructions still win. Every real explanation (4+ words) is assessed, so concepts turn green as the student teaches. The buddy asks "why / what if / example?" and now and then slips in one plausible wrong idea as a genuine guess.
+- Live check in Telugu: the buddy repeats what it heard, asks "what happens in a dark room?", and suggests "plants eat soil, right?". Tests: worker 139, API 70.

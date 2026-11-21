@@ -300,6 +300,7 @@ class InterviewState(TypedDict, total=False):
     # =========================================================================
     current_topic: str
     page_text: str  # a photographed textbook page (study from a page)
+    study_style: str  # "teach": test your knowledge (the learner teaches the buddy)
     # Language the buddy speaks now: ml-IN | te-IN | en-IN (follows the learner)
     language: str
     # "study" (default) or "talk" (Just talk: emotional buddy, brain/talk.py)

@@ -18,6 +18,8 @@ class CreateCallRequest(BaseModel):
     topic: str | None = Field(default=None, max_length=120)
     # A photographed textbook page (POST /pages/read): the session teaches from it
     page_id: str | None = Field(default=None, max_length=32)
+    # study only: "learn" (the buddy teaches) or "teach" (test your knowledge: you teach the buddy)
+    style: Literal["learn", "teach"] = "learn"
     # Buddy voice (Sarvam Bulbul v3 speaker)
     voice: Literal["kavya", "shubh"] = Field(default="kavya")
 

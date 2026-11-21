@@ -1,7 +1,9 @@
 /** Learn: pick or type a topic, then study it with the buddy. */
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ChevronLeft, Search } from 'lucide-react';
+import { ArrowRight, BookOpen, ChevronLeft, GraduationCap, Search } from 'lucide-react';
+
+import { cx } from '@/ui/cx';
 
 import { useStats } from './data';
 import { sessionUrl } from './HomePage';
@@ -16,7 +18,8 @@ export function LearnPage() {
   const navigate = useNavigate();
   const stats = useStats();
   const [topic, setTopic] = useState('');
-  const start = (value: string) => value.trim() && navigate(sessionUrl('study', value.trim()));
+  const [style, setStyle] = useState<'learn' | 'teach'>('learn');
+  const start = (value: string) => value.trim() && navigate(sessionUrl('study', value.trim(), undefined, style));
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     start(topic);
@@ -32,6 +35,30 @@ export function LearnPage() {
       <h1 className="font-display text-h2 font-bold">
         <Scribble>{t.learnTitle}</Scribble>
       </h1>
+
+      {/* how to study: the buddy teaches, or you teach the buddy */}
+      <div role="radiogroup" aria-label={t.styles.teach} className="grid grid-cols-2 gap-2">
+        {(['learn', 'teach'] as const).map((s) => {
+          const Icon = s === 'learn' ? BookOpen : GraduationCap;
+          const on = style === s;
+          return (
+            <button
+              key={s}
+              role="radio"
+              aria-checked={on}
+              onClick={() => setStyle(s)}
+              className={cx(
+                'flex flex-col items-start gap-1 p-3 text-left',
+                on ? 'sketch bg-turmeric-soft text-ink' : 'sketch-soft bg-surface text-muted',
+              )}
+            >
+              <Icon size={22} aria-hidden className={on ? 'text-accent' : ''} />
+              <span className="font-display text-lead font-bold leading-tight text-ink">{t.styles[s]}</span>
+              <span className="text-meta leading-snug">{s === 'learn' ? t.styles.learnHint : t.styles.teachHint}</span>
+            </button>
+          );
+        })}
+      </div>
 
       <form onSubmit={onSubmit} className="space-y-3">
         <label className="sketch flex h-14 items-center gap-3 bg-surface px-4">
@@ -51,7 +78,7 @@ export function LearnPage() {
           disabled={!topic.trim()}
           className="inline-flex h-14 w-full items-center justify-center gap-2 sketch bg-accent text-lead font-semibold text-accent-on disabled:opacity-50"
         >
-          {t.learnStart}
+          {style === 'teach' ? t.styles.teachStart : t.learnStart}
           <ArrowRight size={18} aria-hidden />
         </button>
       </form>

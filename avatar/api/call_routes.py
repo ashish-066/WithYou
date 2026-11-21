@@ -59,6 +59,7 @@ async def create_call(request: CreateCallRequest, user: User = Depends(require_u
     page = await load_page(user.user_id, request.page_id) if request.page_id and request.mode == "study" else None
     if page:
         topic = page["topic"]
+    style = request.style if request.mode == "study" else "learn"
     await AuthStore().create_interview(
         session_id, user.org_id, candidate_name=name, user_id=user.user_id,
         interview_mode=request.mode, language=request.language, topic=topic,
@@ -82,6 +83,7 @@ async def create_call(request: CreateCallRequest, user: User = Depends(require_u
             "language": request.language,
             "mode": request.mode,
             "topic": topic,
+            "style": style,
             "voice": request.voice,
             "livekit_url": settings.livekit_url,
             "created_at": datetime.now(UTC).isoformat(),
@@ -99,6 +101,7 @@ async def create_call(request: CreateCallRequest, user: User = Depends(require_u
                     "mode": request.mode,
                     **({"topic": topic} if topic else {}),
                     **({"page": json.dumps(page, ensure_ascii=False)} if page else {}),
+                    **({"style": style} if style == "teach" else {}),
                 },
             )
         finally:

@@ -75,6 +75,7 @@ priority over everything else in this task for this turn.
 Mode for this turn: {mode}
 - chat: be a friendly companion. React to what they said, keep it light, and if it fits, offer
   to study something together ("Want to pick a topic?").
+- student: the learner is teaching YOU (see <system_instruction>). Never explain; be the curious student.
 - explain: teach the thing they asked about conversationally. Start with the core idea in one
   or two sentences, give one everyday example, then offer to go deeper or to check
   understanding with a quick question. Don't lecture: at most 4 short sentences.
@@ -146,6 +147,26 @@ def language_rule(state: InterviewState) -> str:
     return LANGUAGE_RULES.get(lang, LANGUAGE_RULES["ml-IN"]) + SWITCH_RULE
 
 
+def teach_block(state: InterviewState) -> str:
+    """Test your knowledge: the learner teaches, the buddy is the curious student."""
+    if state.get("study_style") != "teach":
+        return ""
+    points = (state.get("understanding") or {}).get("points") or []
+    todo = [p["text"] for p in points if p.get("status") != "understood"]
+    return (
+        "ROLE SWAP: the learner is the TEACHER today and you are "
+        "a curious younger student who doesn't know this topic. Do NOT explain or lecture. Instead:\n"
+        "- React to what they taught you in your own words, then ask ONE curious question: 'but why...?', "
+        "'what happens if...?', 'can you give me an example?'.\n"
+        "- Now and then (not every turn) say a small, plausible wrong idea as your guess, e.g. 'oh, so plants "
+        "eat soil for food, right?', so they can correct you. Only ever ONE wrong idea at a time, and accept "
+        "the correction happily. Say it as a genuine guess; NEVER hint that it's wrong or on purpose.\n"
+        "- If they're stuck, give a tiny hint as a question, then hand it back to them.\n"
+        "- When they explain something well, tell them it finally makes sense to you, warmly.\n"
+        + ("Steer your questions toward these ideas they haven't taught you yet:\n- " + "\n- ".join(todo[:4]) if todo else "")
+    )
+
+
 def page_block(state: InterviewState) -> str:
     """The textbook page the learner photographed: teach from it, in their words."""
     text = (state.get("page_text") or "").strip()
@@ -177,6 +198,8 @@ def turn_mode(state: InterviewState) -> str:
 
     An answer to the buddy's own check question is coached (brain/understanding.py).
     """
+    if state.get("study_style") == "teach":
+        return "student"  # test your knowledge: the learner teaches (teach_block)
     if state.get("answering_check"):
         return "coach"  # decided before the graph: it's an answer to our question
     return MODES.get(str(state.get("input_classification") or ""), "chat")
@@ -231,7 +254,9 @@ async def conversation_tool(
             recent_messages=recent_messages or "No previous messages.",
             skill_guidance=skill_guidance,
             user_message=input_data.user_message,
-            interviewer_instruction=state.get("interviewer_instruction") or "None",
+            # Test your knowledge: the role swap is the app's instruction unless a more
+            # important one (safety, goodbye, a follow-up) already holds this turn
+            interviewer_instruction=state.get("interviewer_instruction") or teach_block(state).strip() or "None",
             session_memory=session_memory(state) + page_block(state),
             mood=state.get("mood") or "Not shared.",
             mode=turn_mode(state),

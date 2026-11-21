@@ -97,3 +97,12 @@ def test_language_buttons_switch_listening_and_voice():
     )
     assert lang.language_of(lang.SWITCHED["ml-IN"]) == "ml-IN"
     assert lang.language_of(lang.SWITCHED["te-IN"]) == "te-IN"
+
+
+def test_teach_greeting():
+    from agents.language import greeting
+
+    assert "teacher" in greeting("en-IN", "study", "Gravity", "teach")
+    assert "Gravity" in greeting("en-IN", "study", "Gravity", "teach")
+    assert "teacher" not in greeting("en-IN", "study", "Gravity")
+    assert "teacher" not in greeting("en-IN", "talk", "tired", "teach")
