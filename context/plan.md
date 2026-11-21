@@ -114,3 +114,27 @@ Tracked in `RESHAPE_CHANGELOG.md` → "Decisions".
 
 ### Order
 Backend + tests → app shell + nav → Home → Learn flow (topic) → History + detail → Progress → Profile → rebrand → phone-size screenshots → commit.
+
+---
+
+## Phase 7: Personal, multilingual, and it tracks how you're doing (Ashish, 2026-11-22)
+Feedback:
+- "Pick up where you left off" stays in Malayalam whatever language is chosen
+- suggestions should come from my previous chats
+- history isn't working properly
+- what does "ideas" mean?
+- track stress levels and learning levels
+
+1. **History fixes (API):**
+   - hide empty sessions (no learner turns)
+   - never show the "not chosen yet" placeholder as a topic
+   - talk sessions have no topic
+   - older sessions without mode/language: infer the language from the transcript script; mode = study
+2. **Everything in the language you choose:** the API translates saved content (topic, recap title/summary/next-time, concepts) into the UI language with Sarvam Translate (`sarvam-translate:v1`, verified live), cached in Redis; falls back to the original text on any failure. `?lang=` on the /me endpoints.
+3. **"Ideas" → "concepts"** (కాన్సెప్ట్స్ / ആശയങ്ങൾ), with a one-line explainer: "the key points of a topic your buddy checks you understood".
+4. **Suggestions from your own history:** the recap also proposes 2–3 related next topics; Home shows *your* unfinished topics + those next topics (translated), defaults only for new users. `GET /me/suggestions`.
+5. **Wellbeing + learning tracking:**
+   - At session end, the same recap call returns a gentle **mood check** from the learner's own words: level 1–5 and a label (calm / happy / tired / bored / stressed / anxious / frustrated / sad). The chosen mood chip counts as self-report. Not a diagnosis; only the learner sees it.
+   - **Learning level** per topic: Just started / Getting there / Confident (share of concepts understood).
+   - `GET /me/stats` adds a 14-day mood timeline, a "how you've been feeling" summary, and levels per topic.
+   - Progress becomes **Insights:** mood over time, learning levels, gentle notes, and "only you can see this". The help card shows if crisis language came up.

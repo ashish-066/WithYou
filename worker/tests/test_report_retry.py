@@ -91,3 +91,24 @@ async def test_sweep_retries_failed_reports_a_few_times(redis):
     await redis.delete("sweep:inactive:lock")
     await sweep_inactive(redis, NOW)  # same attempt isn't queued twice
     assert len(await redis.xrange("interview:requests")) == 1
+
+
+async def test_recap_carries_mood_and_next_topics_and_analytics_drop_placeholders(monkeypatch):
+    reply = json.dumps({
+        "title": "t", "summary": "s", "covered": [], "improved": [], "next_time": "n",
+        "suggested_next": ["Respiration in plants", "Food chains"], "mood": {"level": "2", "label": "Stressed"},
+    })
+    pool(monkeypatch, Client(reply), Client(reply))
+    out = await report_generator.generate_descriptive_report({"session_id": "s", "messages": []})
+    assert out.data["mood"] == {"level": 2, "label": "stressed"}
+    assert out.data["suggested_next"] == ["Respiration in plants", "Food chains"]
+
+    bad = json.dumps({"summary": "s", "mood": {"level": 9, "label": "ecstatic"}})
+    pool(monkeypatch, Client(bad), Client(bad))
+    assert (await report_generator.generate_descriptive_report({"session_id": "s", "messages": []})).data.get("mood") is None
+
+    analytics = (await report_generator.generate_analytics_report(
+        {"current_topic": "not chosen yet", "mood": "Stressed", "crisis_flagged": True})).data
+    assert analytics.get("topic") is None and analytics["self_mood"] == "Stressed" and analytics["crisis"] is True
+    talk = (await report_generator.generate_analytics_report({"current_topic": "humor", "session_mode": "talk"})).data
+    assert talk.get("topic") is None and talk["mode"] == "talk"

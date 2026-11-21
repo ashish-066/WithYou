@@ -51,8 +51,13 @@ Respond with JSON only:
   "summary": "one or two warm sentences about today's session",
   "covered": ["what we studied together", "..."],
   "improved": ["something they got better at or that clicked during the session", "..."],
-  "next_time": "one gentle suggestion for next time"
-}}"""
+  "next_time": "one gentle suggestion for next time",
+  "suggested_next": ["2 or 3 short topic names that would be good to study next, related to today"],
+  "mood": {{"level": 1-5, "label": "one of: calm, happy, tired, bored, stressed, anxious, frustrated, sad"}}
+}}
+
+"mood" is your gentle read of how the learner seemed during the session, from their own words only
+(5 = cheerful and relaxed, 3 = okay, 1 = very low). If you can't tell, use 3 and "calm"."""
 
 TALK_RECAP_PROMPT = """You are a warm buddy writing a short, kind note to someone you just had a heart-to-heart
 talk with (not a study session). Write it to them ("you"), in simple, friendly {language}{script_note}.
@@ -70,8 +75,12 @@ Respond with JSON only:
   "summary": "two warm sentences for them",
   "covered": ["what we talked about, in a few gentle words"],
   "improved": [],
-  "next_time": "one small, kind idea for looking after themselves"
-}}"""
+  "next_time": "one small, kind idea for looking after themselves",
+  "mood": {{"level": 1-5, "label": "one of: calm, happy, tired, bored, stressed, anxious, frustrated, sad"}}
+}}
+
+"mood" is your gentle read of how they seemed, from their own words only (5 = cheerful and relaxed,
+3 = okay, 1 = very low). If you can't tell, use 3 and "calm"."""
 
 HELPLINE = {
     "en-IN": "If things ever feel too heavy, please talk to someone you trust, or call Tele-MANAS on 14416 (free, any time). In an emergency, call 112.",
@@ -130,6 +139,10 @@ async def generate_descriptive_report(state: InterviewState, input_data: Any = N
         recap, source = fallback_recap(state), "fallback"
     recap["language"] = language
     recap["mode"] = state.get("session_mode") or "study"
+    recap.setdefault("mood", None)
+    recap.setdefault("suggested_next", [])
+    if recap["mode"] == "talk":
+        recap["suggested_next"] = []
     if recap["mode"] == "talk":
         # Private: what they shared never goes on the card (the model may repeat it)
         recap["covered"], recap["improved"] = [], []
@@ -177,7 +190,26 @@ def _parse_recap(text: str) -> dict[str, Any]:
         "covered": as_list(data.get("covered")),
         "improved": as_list(data.get("improved")),
         "next_time": str(data.get("next_time") or "").strip(),
+        "suggested_next": as_list(data.get("suggested_next"))[:3],
+        "mood": _parse_mood(data.get("mood")),
     }
+
+
+MOOD_LABELS = ("calm", "happy", "tired", "bored", "stressed", "anxious", "frustrated", "sad")
+
+
+def _parse_mood(value: Any) -> dict[str, Any] | None:
+    """{"level": 1..5, "label": one of MOOD_LABELS}, or None if the model gave nothing usable."""
+    if not isinstance(value, dict):
+        return None
+    try:
+        level = int(round(float(value.get("level"))))
+    except (TypeError, ValueError):
+        return None
+    label = str(value.get("label") or "").strip().lower()
+    if not 1 <= level <= 5 or label not in MOOD_LABELS:
+        return None
+    return {"level": level, "label": label}
 
 
 # =============================================================================
@@ -189,8 +221,15 @@ async def generate_analytics_report(state: InterviewState, input_data: Any = Non
     """Topic and ideas from the understanding map (no model call, no scores)."""
     u = state.get("understanding") or {}
     ideas = [{"text": p.get("text", ""), "status": p.get("status", "unseen")} for p in u.get("points") or []]
+    topic = u.get("topic") or state.get("current_topic")
+    if state.get("session_mode") == "talk" or topic in (None, "", "not chosen yet", "general", "introduction"):
+        topic = None  # placeholder or a talk session: no topic
     data = {
-        "topic": u.get("topic") or state.get("current_topic"),
+        "topic": topic,
+        "mode": state.get("session_mode") or "study",
+        # How they said they feel (mood chip) and whether crisis language came up
+        "self_mood": state.get("mood") or None,
+        "crisis": bool(state.get("crisis_flagged")),
         "language": state.get("language"),
         "ideas": ideas,
         "covered": sum(1 for i in ideas if i["status"] == "understood"),
