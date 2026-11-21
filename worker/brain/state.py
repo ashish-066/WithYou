@@ -310,13 +310,11 @@ class InterviewState(TypedDict, total=False):
     dfa: DFAState
     input_classification: Literal[
         "conversation",
-        "question",
-        "profile_request",
+        "explain_request",
+        "quiz_request",
         "report_request",
         "deep_analysis",
-        "search_request",
         "end_signal",
-        "slow_task_trigger",
         "unknown",
     ]
 
@@ -437,7 +435,7 @@ def create_default_interview_state(session_id: str) -> InterviewState:
         message_summary=None,
         current_input="",
         # Interview Progress
-        current_topic="introduction",
+        current_topic="not chosen yet",
         topics_covered=[],
         turn_count=0,
         max_turns=40,  # safety net; the time budget ends interviews (brain/interview_flow.py)

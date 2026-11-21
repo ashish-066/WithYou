@@ -31,7 +31,7 @@ class MonitorPolicy:
 POLICY = MonitorPolicy()
 
 LINES = {
-    "repeat_offer": "Take your time. Would you like me to repeat the question?",
+    "repeat_offer": "No rush! Want me to say that again, or shall I give you a little hint?",
 }
 
 

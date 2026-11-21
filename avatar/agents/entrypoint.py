@@ -1,7 +1,7 @@
-"""LiveKit Agent Server entrypoint for interview sessions.
+"""LiveKit Agent Server entrypoint for study sessions.
 
 This module sets up the LiveKit agent that:
-1. Joins interview rooms when candidates connect
+1. Joins the study room when the API dispatches it
 2. Runs STT on user audio (via Deepgram)
 3. Forwards each completed user turn to Brain Worker via Redis
    (end of turn decided by LiveKit's turn detector)
@@ -64,6 +64,14 @@ TURN_HANDLING = {
         "resume_false_interruption": True,
         "false_interruption_timeout": 1.0,
     },
+}
+
+
+GREETINGS = {
+    "en": (
+        "Hey there! I'm your study buddy. What shall we study today? "
+        "Tell me a topic, or just say hi and we'll figure it out together."
+    ),
 }
 
 
@@ -365,11 +373,8 @@ async def entrypoint(ctx: JobContext) -> None:
             )
         )
 
-        # Initial greeting to welcome the candidate
-        greeting = (
-            f"Hello! I'm {settings.agent_name}, your AI interviewer today. "
-            "It's great to meet you! Whenever you're ready, please introduce yourself and we can begin."
-        )
+        # The buddy says hello first (spoken by the agent; the brain answers from then on)
+        greeting = GREETINGS.get(settings.buddy_language, GREETINGS["en"])
         logger.info(f"Speaking initial greeting for session {session_id}")
         await session.say(greeting, allow_interruptions=True)
         logger.info(f"Initial greeting complete for session {session_id}")

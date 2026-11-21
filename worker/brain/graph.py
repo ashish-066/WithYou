@@ -244,7 +244,7 @@ def brain_route_decision(state: InterviewState) -> Literal["fast", "slow", "end"
     routing_method = state.get("routing_method", "prefilter")
     routing_confidence = state.get("routing_confidence", 0.0)
 
-    slow_types = {"profile_request", "report_request", "deep_analysis"}
+    slow_types = {"report_request", "deep_analysis"}
 
     if input_type in slow_types:
         logger.info(

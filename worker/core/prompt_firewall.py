@@ -27,6 +27,7 @@ class PromptFirewall:
     ESCAPE_PATTERNS = [
         "</user_input>",
         "</candidate_input>",
+        "</learner_input>",
         "</context>",
         "<system>",
         "<|endoftext|>",

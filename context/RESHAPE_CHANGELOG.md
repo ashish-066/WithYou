@@ -66,3 +66,23 @@ Ashish heard nothing. What I found:
 - Tests: avatar 47 passed (+1 dispatch test), worker 59 passed.
 - **Decision (Ashish):** TTS → **Deepgram Aura** (`aura-2-thalia-en`, `DEEPGRAM_TTS_MODEL`) for Phase 0/1. Cartesia is removed from the agent (still out of credits). The avatar stays voice-only automatically while Bey is out of credits. Real dispatch test: Deepgram TTS connected, audio frames flowing, 0 errors.
 - **[ASK ASHISH] Phase 0 manual test: PASSED (2026-11-21).** English voice loop end-to-end: greeting, reply to speech, end call. **Phase 0 exit checkpoint met.**
+
+## Phase 1: Reskin the brain into a study buddy (English) ✅ (automated); manual test pending
+
+### Changed
+- **Persona:** `worker/brain/tools/fast/conversation.py` uses the BUILD_PLAN §10 persona prompt, with a per-turn **mode** (`chat` / `explain` / `check`) taken from the router's intent, and spoken-only output rules. User text is now in `<learner_input>` (added to the firewall's escape patterns); system steering is in `<system_instruction>`; the skill-tree hint becomes `<what_to_check_next>` (Phase 3 fills it). The language rule comes from the new worker setting `BUDDY_LANGUAGE` (`en` now, `ml` in Phase 2).
+- **Router intents** (`brains/router.py`, regex first; `llm_router.py` model second, prompt rewritten): `explain_request` and `quiz_request` (new), `conversation`, `end_signal` (session phrases: "that's all for today", "I'm done", "bye"…), and `report_request` / `deep_analysis` (slow). The old `question` category was folded into `explain_request`, because its 0.70 confidence clashed with explain matches and would have forced an LLM routing call (extra latency) on "what is X?".
+- **Deviation from the plan, on purpose:** the plan maps "prepare a gentle check" to `slow`. But the check question *is* the spoken reply, and the slow path doesn't publish early. So `quiz_request` goes to **fast** (mode `check`) to keep reply-before-scoring. The slow brain still does reports, and Phase 3's understanding-map update runs after the reply.
+- **Topic tracking:** `current_topic` was never set before. It now follows what the buddy explained or checked.
+- **Flow** (`interview_flow.py`): buddy wording for wrap-up, closing, confirm-end, move-on (silence → reassurance and a hint, no penalty), reconnect and goodbye lines. The budget is 30 min (wrap-up at 24, early wrap allowed from 10). A goodbye is still confirmed before ending.
+- **Voice agent:** new greeting ("Hey there! I'm your study buddy. What shall we study today?…"), a gentler silence nudge, `AGENT_NAME` = "Study Buddy", and an avatar `BUDDY_LANGUAGE` setting for Phase 2.
+- **State naming:** done at the prompt and transcript level (Learner/Buddy). The Redis/Postgres keys and the stream `message_type` values (`candidate_response`, `interview_ended`, `InterviewState`) are unchanged on purpose: renaming them would touch the Redis stream contract, which the plan says not to change without asking.
+
+### Fixed along the way
+- `ConversationInput.interview_phase` was a strict Literal: the new phase names would have made every reply fail validation. Now `warm_up | studying | closing`.
+
+### Tests
+- New `worker/tests/test_buddy_routing.py` (16): topic request → explain on the fast path with no LLM routing call; casual → chat; quiz → check; wrap-up → confirm → conclude; mode mapping; the prompt contains the persona and `<learner_input>`, and no "interviewer"/"candidate".
+- worker **75 passed**, avatar **47 passed**; reply-before-scoring test (`test_processor_early_reply`) still green.
+- **Real-brain smoke test** (real graph + Gemini, no voice): a tired "hi" got an empathetic chat reply; "Teach me about photosynthesis" got a warm 3-sentence explanation with an analogy and an offer to go deeper or check; "quiz me" got one gentle question; a half answer got praise for the right part and a hint for the rest, with no grading. 2.5–4.4 s per full turn (the reply is published before scoring).
+- **[ASK ASHISH] pending:** voice test, "Teach me about photosynthesis".

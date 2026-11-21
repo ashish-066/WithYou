@@ -298,6 +298,10 @@ async def respond_node(state: InterviewState) -> dict[str, Any]:
     for topic in topics_touched:
         if topic not in topics_covered:
             topics_covered.append(topic)
+    # The topic being studied: what the buddy last explained or checked
+    current_topic = state.get("current_topic", "")
+    if topics_touched and state.get("input_classification") in ("explain_request", "quiz_request"):
+        current_topic = topics_touched[0]
 
     # Score the candidate's response in real-time
     running_scores = dict(state.get("running_scores", {}))
@@ -362,6 +366,7 @@ async def respond_node(state: InterviewState) -> dict[str, Any]:
         "messages": messages,
         "response": response,
         "topics_covered": topics_covered,
+        "current_topic": current_topic,
         "running_scores": running_scores,
         "timestamp_notes": timestamp_notes,
         "dfa": dfa,

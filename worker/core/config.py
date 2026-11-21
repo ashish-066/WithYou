@@ -75,6 +75,8 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.8-flash"
     # Sarvam (Malayalam STT/TTS and the sarvam-105b brain); https://dashboard.sarvam.ai
     sarvam_api_key: str = ""
+    # Language the buddy speaks: "en" (Phase 1) or "ml" (Malayalam, Phase 2)
+    buddy_language: str = "en"
     # Scoring pipeline (JD parse, ladders, question selection, evidence): fail fast
     # instead of holding the worker while Gemini is slow. Each step has a fallback.
     scoring_llm_timeout_seconds: float = 20.0  # per Gemini request

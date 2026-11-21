@@ -1,13 +1,13 @@
-"""How an interview moves towards its end: time budget, wrap-up, closing,
-confirming a goodbye, unanswered questions and returns after an absence.
+"""How a study session moves towards its end: time budget, wrap-up, closing,
+confirming a goodbye, unanswered questions and returns after a dropped connection.
 
 The rules here are conversation-level and run in the worker before each graph
 run. Clock-based rules that need no candidate turn (silence, a dropped
 connection) live in the voice agent
 (avatar/agents/interview_monitor.py), which reports them as events.
 
-Principle: nothing the candidate does buys unobserved time. The clock never
-stops, and coming back from an absence replaces the current question.
+Principle: gentle pacing. Silence gets encouragement, not a penalty; a goodbye
+is confirmed before the session ends.
 """
 
 from __future__ import annotations
@@ -24,14 +24,14 @@ from typing import Any, Literal
 
 @dataclass(frozen=True)
 class FlowPolicy:
-    budget_minutes: float = 45.0
+    budget_minutes: float = 30.0
     # Start wrapping up at this share of the budget
     wrap_up_fraction: float = 0.8
     # Safety nets: never normally reached
     hard_stop_minutes: float = 60.0
     max_turns: int = 40
     # Don't wrap up on settled ratings before this
-    min_minutes_round1: float = 15.0
+    min_minutes_round1: float = 10.0
     # Candidate's questions and goodbye
     closing_minutes: float = 3.0
     # A skill is settled with this much evidence and a stable rating
@@ -58,67 +58,48 @@ EndReason = Literal[
 INCOMPLETE_REASONS = {"no_response", "disconnected", "abandoned"}
 
 # =============================================================================
-# Instructions for the interviewer (sent outside <candidate_input>)
+# Instructions for the buddy (sent outside <learner_input>)
 # =============================================================================
 
 INSTRUCTIONS = {
     "wrap_up": (
-        "Time to wrap up. Respond briefly to the candidate's last answer, tell them that "
-        "was your last question, and ask what questions they have for you about the role "
-        "or the process. Do not ask another interview question."
+        "We're near the end of today's study time. Respond warmly to what the learner just said, "
+        "tell them they did well today, and ask if there's anything they'd like to go over once "
+        "more before you finish. Don't start a new topic."
     ),
     "closing": (
-        "You are in the closing part of the interview. Answer the candidate's question "
-        "briefly and honestly (you cannot share results or how they did). Then ask if "
-        "they have anything else. Do not ask interview questions."
+        "You're wrapping up the session. Briefly help with what they asked (one or two short "
+        "sentences), then ask if there's anything else. Don't start a new topic."
     ),
     "confirm_end": (
-        "The candidate may want to stop the interview early. Ask them to confirm, in one "
-        "short sentence, for example: \"It sounds like you'd like to finish. Shall we end "
-        "the interview here?\" Do not ask any other question."
+        "The learner may want to stop. Check kindly in one short sentence, for example: "
+        "\"Shall we stop here for today?\" Don't ask anything else."
     ),
     "continue_after_confirm": (
-        "The candidate wants to continue. Acknowledge that briefly and carry on with the "
-        "interview where you left off."
+        "The learner wants to keep going. Say something encouraging in a few words and carry on "
+        "where you left off."
     ),
     "move_on": (
-        "The candidate did not answer the last question. Do not repeat it or wait for it. "
-        "Say briefly that you'll move on, and ask a different question on a different "
-        "topic or skill."
+        "The learner didn't answer. That's completely fine: don't repeat the question or make "
+        "them feel bad. Reassure them in a few words, give a small hint or a simpler way in, "
+        "or offer to explain it together."
     ),
     "replace_question": (
-        "The candidate was disconnected and has just come "
-        "back. Do not return to the previous question: it is no longer valid. Say in one "
-        "sentence that you'll continue with a different question, then ask a new question "
-        "on a different topic or skill."
+        "The learner's connection dropped and they're back. Welcome them back warmly in one "
+        "sentence and pick up the topic again with something easy."
     ),
 }
 
 CLOSING_MESSAGES = {
-    "completed": (
-        "Thank you for your time today. That's the end of our interview. The hiring team "
-        "will review it and be in touch. Goodbye!"
-    ),
-    "candidate_ended": (
-        "Alright, we'll end the interview here. Thank you for your time. The hiring team "
-        "will be in touch. Goodbye!"
-    ),
-    "time_limit": (
-        "We've reached the time limit, so we'll stop here. Thank you for your time. "
-        "The hiring team will be in touch. Goodbye!"
-    ),
-    "turn_limit": (
-        "That brings us to the end of the interview. Thank you for your time. "
-        "The hiring team will be in touch. Goodbye!"
-    ),
-    "no_response": (
-        "It seems we've lost you, so we'll stop here. Thank you, and goodbye."
-    ),
-    "disconnected": "The interview has ended. Thank you.",
-    "abandoned": "The interview has ended. Thank you.",
-    "user_ended": "Thank you for your time. Goodbye!",
+    "completed": "That was a great session! You did really well today. See you next time, bye!",
+    "candidate_ended": "Okay, let's stop here for today. Nice work, see you next time!",
+    "time_limit": "We've studied for a good while, so let's take a break here. Well done today. Bye!",
+    "turn_limit": "That's a lot of learning for one session! Let's stop here. Well done, bye!",
+    "no_response": "Looks like you've stepped away, so let's pause here. Come back any time. Bye!",
+    "disconnected": "The session has ended. Come back any time!",
+    "abandoned": "The session has ended. Come back any time!",
+    "user_ended": "Thanks for studying with me today. Bye!",
 }
-
 
 def closing_message(end_reason: str | None) -> str:
     return CLOSING_MESSAGES.get(end_reason or "completed", CLOSING_MESSAGES["completed"])
@@ -136,7 +117,10 @@ _GOODBYE = [
         r"\bthat'?s (all|it)( from me| for me)?" + _END,
         r"\bi(?: want| would like|'d like| d like) to (stop|end|finish)( (the|this) interview| here| now| early|" + _END + ")",
         r"\blet'?s (stop|end|finish)( (the|this) interview| here| now|" + _END + ")",
-        r"\b(end|stop|finish) (the|this) interview\b",
+        r"\b(end|stop|finish) (the|this|our) (interview|session)\b",
+        r"\bthat'?s (all|enough) for (today|now)\b",
+        r"\bi'?m done( for today)?" + _END,
+        r"\bsee you (later|tomorrow)\b",
         r"\bno (more )?questions\b",
         r"\bthank you for your time\b",
     )

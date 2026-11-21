@@ -87,17 +87,13 @@ class Settings(BaseSettings):
     sarvam_api_key: str = ""
 
     # Agent Configuration
-    agent_name: str = "Presence"
+    agent_name: str = "Study Buddy"
+    # Language the buddy greets and nudges in: "en" or "ml" (Malayalam, Phase 2)
+    buddy_language: str = "en"
     # The voice agent registers under this name and is dispatched explicitly to
     # each call's room, so no other agent on the same LiveKit project takes it
     agent_dispatch_name: str = "padippu-buddy"
-    agent_instructions: str = """You are Presence, a professional AI interviewer conducting a job interview.
-You are warm, professional, and encouraging while maintaining high standards.
-Keep your responses concise (2-3 sentences) to maintain natural conversation flow.
-Ask follow-up questions to understand the candidate's experience deeply.
-Never use markdown, bullet points, or special formatting - speak naturally."""
-
-    # S3 Configuration for Egress
+    agent_instructions: str = ""  # unused: the brain worker writes every reply
 
     # Context Configuration (Must match worker config)
     context_prefix: str = "context"

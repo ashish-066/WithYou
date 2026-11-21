@@ -99,17 +99,32 @@ class PatternConfig:
 
 # Pattern definitions with confidence weights
 PATTERNS: dict[str, list[PatternConfig]] = {
-    # End signals - high confidence when matched
+    # Wrapping up the session (interview_flow asks to confirm, then concludes)
     "end_signal": [
-        PatternConfig(r"\bgoodbye\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
-        PatternConfig(
-            r"\bthank\s+you\s+for\s+your\s+time\b", CONFIDENCE_EXACT_MATCH, is_strong=True
-        ),
-        PatternConfig(r"\bno\s+(more\s+)?questions\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
-        PatternConfig(r"\bthat\'s\s+all\b", 0.90, is_strong=True),
-        PatternConfig(r"\bwrap\s*up\b", 0.75),  # Could be ambiguous
-        PatternConfig(r"\bend\s+the\s+interview\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
-        PatternConfig(r"\bfinish\s+(up|the|this)\b", 0.70),
+        PatternConfig(r"\b(good)?bye\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
+        PatternConfig(r"\bthat'?s (all|enough) for (today|now)\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
+        PatternConfig(r"\blet'?s (stop|end|finish|wrap up)( here| now| for today)?\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
+        PatternConfig(r"\bi'?m done( for today)?\b", 0.90, is_strong=True),
+        PatternConfig(r"\b(end|stop|finish) (the|this|our) session\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
+        PatternConfig(r"\bsee you (later|tomorrow)\b", 0.90, is_strong=True),
+        PatternConfig(r"\bwrap\s*up\b", 0.75),
+    ],
+    # Learner wants a topic explained / taught (fast brain, explain mode)
+    "explain_request": [
+        PatternConfig(r"\b(teach|explain|tell)\s+(me|us)\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
+        PatternConfig(r"\b(explain|describe)\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
+        PatternConfig(r"\b(i want|i'd like|i would like|help me|can we|let'?s)\s+(to\s+)?(learn|study|understand|revise|go over)\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
+        PatternConfig(r"\bwhat (is|are|was|were|does|do)\b", 0.90, is_strong=True),
+        PatternConfig(r"\b(how|why) (does|do|is|are|did|can)\b", 0.90, is_strong=True),
+        PatternConfig(r"\b(meaning|definition) of\b", 0.90, is_strong=True),
+        PatternConfig(r"\bi (don'?t|do not) (get|understand)\b", 0.90, is_strong=True),
+        PatternConfig(r"\?$", 0.85),
+    ],
+    # Learner asks to be checked (fast brain, check mode: one gentle question)
+    "quiz_request": [
+        PatternConfig(r"\b(quiz|test|check)\s+(me|my)\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
+        PatternConfig(r"\bask me (a |some )?(question|questions)\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
+        PatternConfig(r"\b(practice|revision) (question|questions)\b", 0.90, is_strong=True),
     ],
     # Report requests (slow brain)
     "report_request": [
@@ -136,20 +151,15 @@ PATTERNS: dict[str, list[PatternConfig]] = {
         PatternConfig(r"\banalysis\b", 0.45),  # Too common, needs context
         PatternConfig(r"\banalyze\b", 0.45),
     ],
-    # Questions (fast brain)
-    "question": [
-        PatternConfig(r"\?$", 0.70),  # Ends with question mark
-        PatternConfig(r"^(what|why|how|when|where|who|which)\s+", 0.65),
-        PatternConfig(r"^(can|could|would|do|does|is|are)\s+", 0.55),
-    ],
 }
 
 # Tool suggestions for each classification
 CLASSIFICATION_TOOLS: dict[str, list[str]] = {
     "end_signal": [],
     "report_request": ["report_descriptive", "report_data"],
+    "explain_request": ["conversation"],
+    "quiz_request": ["conversation"],
     "deep_analysis": ["deep_analysis"],
-    "question": ["conversation"],
     "conversation": ["conversation"],
     "unknown": ["conversation"],
 }
@@ -159,7 +169,10 @@ CLASSIFICATION_BRAIN: dict[str, Literal["fast", "slow", "end"]] = {
     "end_signal": "end",
     "report_request": "slow",
     "deep_analysis": "slow",
-    "question": "fast",
+    # Explaining and gentle checks are replies: they take the fast path so they are
+    # spoken immediately (reply-before-scoring); tracking runs after them
+    "explain_request": "fast",
+    "quiz_request": "fast",
     "conversation": "fast",
     "unknown": "fast",
 }
@@ -278,7 +291,8 @@ def classify_input(
     context: dict[str, Any] | None = None,
 ) -> Literal[
     "conversation",
-    "question",
+    "explain_request",
+    "quiz_request",
     "report_request",
     "deep_analysis",
     "end_signal",
@@ -614,7 +628,7 @@ async def brain_router_node(state: InterviewState) -> dict[str, Any]:
     if router.should_end_interview(state):
         event = "is_end_signal"
         brain_mode: Literal["fast", "slow", "idle"] = "idle"
-    elif input_type in {"profile_request", "report_request", "deep_analysis"}:
+    elif input_type in {"report_request", "deep_analysis"}:
         event = "is_task"
         brain_mode = "slow"
     else:

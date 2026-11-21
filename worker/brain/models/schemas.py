@@ -379,7 +379,7 @@ class ConversationInput(BaseModel):
     user_message: str
     context_summary: str | None = None
     current_topic: str = "general"
-    interview_phase: Literal["intro", "technical", "behavioral", "closing"] = "technical"
+    interview_phase: Literal["warm_up", "studying", "closing"] = "studying"
 
 
 class SearchInput(BaseModel):
@@ -453,11 +453,10 @@ class RoutingDecision(BaseModel):
     )
     input_classification: Literal[
         "conversation",
-        "question",
-        "profile_request",
+        "explain_request",
+        "quiz_request",
         "report_request",
         "deep_analysis",
-        "search_request",
         "end_signal",
         "unknown",
     ] = Field(default="unknown", description="Classification of the input type")
@@ -471,11 +470,10 @@ class PrefilterResult(BaseModel):
 
     classification: Literal[
         "conversation",
-        "question",
-        "profile_request",
+        "explain_request",
+        "quiz_request",
         "report_request",
         "deep_analysis",
-        "search_request",
         "end_signal",
         "unknown",
     ]

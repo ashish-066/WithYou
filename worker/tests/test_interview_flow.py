@@ -37,19 +37,19 @@ def test_goodbye_words_inside_an_answer_dont_count():
     assert not flow.wants_to_stop("I built the cache, and that's all I did on that project")
     assert not flow.wants_to_stop("I'd like to finish this function first")
     assert flow.wants_to_stop("I think that's all from me.")
-    assert flow.wants_to_stop("I want to stop the interview")
+    assert flow.wants_to_stop("I want to stop the session")
 
 
 def test_goodbye_asks_for_confirmation_then_ends_on_yes():
     d = flow.before_candidate_turn(state(), "I'd like to stop here", NOW)
-    assert d.action == "continue" and "confirm" in d.instruction and d.flow["phase"] == "confirm_end"
+    assert d.action == "continue" and d.instruction == flow.INSTRUCTIONS["confirm_end"] and d.flow["phase"] == "confirm_end"
 
     yes = flow.before_candidate_turn(state(flow=d.flow), "Yes, please", NOW)
     assert (yes.action, yes.end_reason) == ("conclude", "candidate_ended")
 
     no = flow.before_candidate_turn(state(flow=d.flow), "No, let's continue", NOW)
     assert no.action == "continue" and no.flow["phase"] == "interview"
-    assert "continue" in no.instruction
+    assert no.instruction == flow.INSTRUCTIONS["continue_after_confirm"]
 
 
 def test_wraps_up_on_time_then_closes_after_candidate_questions():
@@ -74,7 +74,7 @@ def test_wraps_up_early_only_when_ratings_are_settled_and_after_the_minimum():
     d = flow.before_candidate_turn(settled, "answer", NOW)
     assert d.flow["wrap_up_reason"] == "assessment_complete"
 
-    too_early = state(minutes=10, skill_tree=SETTLED_TREE, flow={"level_history": history})
+    too_early = state(minutes=8, skill_tree=SETTLED_TREE, flow={"level_history": history})
     assert flow.before_candidate_turn(too_early, "answer", NOW).instruction == ""
 
     moving = state(minutes=16, skill_tree=SETTLED_TREE, flow={"level_history": {**history, "sql": [1.0, 2.0]}})
@@ -133,8 +133,8 @@ async def test_processor_confirms_goodbye_and_signals_the_end(redis):
     graph = EchoGraph()
     p = MessageProcessor(redis, graph=graph)
 
-    r = await p.process(msg(1, "candidate_response", "I want to stop the interview"))
-    assert "confirm" in graph.seen[-1]["interviewer_instruction"] and not r["ended_now"]
+    r = await p.process(msg(1, "candidate_response", "I want to stop the session"))
+    assert graph.seen[-1]["interviewer_instruction"] == flow.INSTRUCTIONS["confirm_end"] and not r["ended_now"]
 
     r = await p.process(msg(2, "candidate_response", "Yes"))
     assert r["ended_now"] and r["end_reason"] == "candidate_ended"
