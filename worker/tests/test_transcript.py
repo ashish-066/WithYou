@@ -46,19 +46,21 @@ async def test_append_and_load(redis):
 
 async def test_processor_records_full_conversation_and_saves_it(db, redis):
     processor = MessageProcessor(redis, graph=ReplyGraph())
-    await processor.process(msg("s2", "system_init"))  # greeting
+    # Setup only: no reply (the voice agent says the greeting itself)
+    await processor.process(msg("s2", "system_init"))
     for i in range(12):  # more than the 10 the state keeps
         await processor.process(msg("s2", "candidate_response", f"answer {i}"))
     await processor.process(StreamMessage("1-0", "s", "s2", "end_call", "", "",
                                           {"end_reason": "user_ended"}))
 
     messages = await load_transcript(redis, "s2")
-    assert messages[0] == {**messages[0], "role": "assistant", "content": "reply 1"}
+    assert messages[0] == {**messages[0], "role": "user", "content": "answer 0"}
+    assert messages[1] == {**messages[1], "role": "assistant", "content": "reply 1"}
     assert [m["content"] for m in messages if m["role"] == "user"] == [
         f"answer {i}" for i in range(12)
     ]
     assert messages[-1]["content"] == "Thanks, that's all."
-    assert len(messages) == 1 + 12 * 2 + 1
+    assert len(messages) == 12 * 2 + 1
 
     async with session_scope() as s:
         row = await s.get(Interview, "s2")
@@ -70,10 +72,10 @@ async def test_unchanged_reply_not_recorded_twice(redis):
         async def ainvoke(self, state, config=None):
             return {**state}  # no node answered: response carried over
 
-    await MessageProcessor(redis, graph=ReplyGraph()).process(msg("s3", "system_init"))
+    await MessageProcessor(redis, graph=ReplyGraph()).process(msg("s3", "candidate_response", "hi"))
     await MessageProcessor(redis, graph=SilentGraph()).process(msg("s3", "slow_task_trigger"))
 
-    assert len(await load_transcript(redis, "s3")) == 1
+    assert len(await load_transcript(redis, "s3")) == 2  # the turn and its reply, once
 
 
 # =============================================================================

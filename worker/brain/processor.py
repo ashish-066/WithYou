@@ -27,6 +27,9 @@ logger = logging.getLogger(__name__)
 
 
 # Messages that come from the candidate's side of the call
+# Languages the buddy speaks (BCP-47, as Sarvam reports them)
+SUPPORTED_LANGUAGES = {"ml-IN", "te-IN", "en-IN"}
+
 CANDIDATE_TURN_TYPES = {"candidate_response", "question_unanswered", "candidate_returned"}
 
 
@@ -115,6 +118,12 @@ class MessageProcessor:
             # Session setup (skill tree from the description sent by the API)
             if message.message_type == "system_init":
                 raw_data = message.raw_data
+                if raw_data.get("language") in SUPPORTED_LANGUAGES:
+                    state["language"] = raw_data["language"]
+                if not raw_data.get("job_description"):
+                    # Setup only: nothing to say (the voice agent greets)
+                    await self.context_manager.update_context(session_id, state)
+                    return {"session_id": session_id, "response": "", "turn_count": state.get("turn_count", 0), "success": True}
                 # Initialize skill tree scoring if job description provided
                 job_description = raw_data.get("job_description")
                 if job_description:
@@ -173,6 +182,11 @@ class MessageProcessor:
             now = datetime.now(timezone.utc)
             decision: interview_flow.Decision | None = None
             if message.message_type == "candidate_response":
+                # The language the learner just spoke (speech recognition detects it):
+                # the buddy answers in it
+                spoken = message.raw_data.get("language")
+                if spoken in SUPPORTED_LANGUAGES:
+                    state["language"] = spoken
                 decision = interview_flow.before_candidate_turn(state, message.content, now)
                 state["flow"] = decision.flow
             elif message.message_type == "question_unanswered":

@@ -299,6 +299,8 @@ class InterviewState(TypedDict, total=False):
     # Interview Progress
     # =========================================================================
     current_topic: str
+    # Language the buddy speaks now: ml-IN | te-IN | en-IN (follows the learner)
+    language: str
     topics_covered: list[str]
     turn_count: int
     max_turns: int  # Configurable interview length

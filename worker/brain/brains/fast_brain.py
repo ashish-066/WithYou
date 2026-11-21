@@ -25,7 +25,6 @@ from brain.state import (
     ToolResult,
 )
 from brain.tools.fast.conversation import conversation_tool
-from brain.tools.fast.response_scorer import score_response
 from brain.tools.fast.timestamp_noter import timestamp_noter_tool
 from brain.tools.fast.tool_decider import tool_decider
 
@@ -267,14 +266,6 @@ async def respond_node(state: InterviewState) -> dict[str, Any]:
     messages = list(state.get("messages", []))
     timestamp = datetime.now(timezone.utc).isoformat()
 
-    # Get the last assistant message as context for scoring
-    interviewer_context = ""
-    if messages:
-        for msg in reversed(messages):
-            if msg.get("role") == "assistant":
-                interviewer_context = msg.get("content", "")
-                break
-
     # Add user message
     messages.append(
         Message(
@@ -303,42 +294,11 @@ async def respond_node(state: InterviewState) -> dict[str, Any]:
     if topics_touched and state.get("input_classification") in ("explain_request", "quiz_request"):
         current_topic = topics_touched[0]
 
-    # Score the candidate's response in real-time
+    # No per-answer grading: the old interview scorer rated "communication" and
+    # "technical_depth" with a second model call after every reply. Understanding
+    # is tracked by the skill tree (scoring_process node, Phase 3) instead.
     running_scores = dict(state.get("running_scores", {}))
     timestamp_notes = list(state.get("timestamp_notes", []))
-
-    try:
-        score_result = await score_response(
-            state=state,
-            candidate_response=current_input,
-            interviewer_context=interviewer_context,
-        )
-
-        if score_result.get("running_scores"):
-            running_scores = score_result["running_scores"]
-            logger.debug(f"[FAST/RESPOND] Updated running_scores: {running_scores}")
-
-        # Add timestamp note if scorer detected notable response
-        if score_result.get("add_timestamp_note"):
-            note_data = score_result["add_timestamp_note"]
-            video_secs = _calculate_video_seconds(state, note_data["timestamp"])
-            timestamp_notes.append(
-                TimestampNote(
-                    timestamp=note_data["timestamp"],
-                    tag=note_data["tag"],
-                    content=note_data["content"],
-                    turn_number=note_data["turn_number"],
-                    video_seconds=video_secs,
-                )
-            )
-            logger.info(
-                f"[FAST/RESPOND] Added timestamp note: {note_data['tag']} at turn "
-                f"{note_data['turn_number']}"
-            )
-
-    except Exception as e:
-        logger.error(f"[FAST/RESPOND] Scoring failed (non-fatal): {e}")
-        # Continue without scoring - don't break the interview
 
     # Add periodic topic notes to ensure timeline has content
     turn_count = state.get("turn_count", 0)

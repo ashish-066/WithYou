@@ -108,6 +108,9 @@ PATTERNS: dict[str, list[PatternConfig]] = {
         PatternConfig(r"\b(end|stop|finish) (the|this|our) session\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
         PatternConfig(r"\bsee you (later|tomorrow)\b", 0.90, is_strong=True),
         PatternConfig(r"\bwrap\s*up\b", 0.75),
+        # Telugu / Malayalam (no \b: word boundaries break inside Indic words)
+        PatternConfig(r"(బై|ఆపేద్దాం|ఆపుదాం|ఇక చాలు|ఈ రోజుకి చాలు|ఇంక చాలు)", 0.95, is_strong=True),
+        PatternConfig(r"(ബൈ|നിർത്താം|ഇന്നത്തേക്ക് മതി)", 0.95, is_strong=True),
     ],
     # Learner wants a topic explained / taught (fast brain, explain mode)
     "explain_request": [
@@ -119,12 +122,18 @@ PATTERNS: dict[str, list[PatternConfig]] = {
         PatternConfig(r"\b(meaning|definition) of\b", 0.90, is_strong=True),
         PatternConfig(r"\bi (don'?t|do not) (get|understand)\b", 0.90, is_strong=True),
         PatternConfig(r"\?$", 0.85),
+        # Telugu: tell / explain / teach / what is / how / why / didn't understand
+        PatternConfig(r"(చెప్పు|చెప్పండి|వివరించు|వివరించండి|నేర్పించు|నేర్పు|అంటే ఏమిటి|అంటే ఏంటి|ఎలా|ఎందుకు|అర్థం కాలేదు)", 0.90, is_strong=True),
+        # Malayalam: tell me / explain / teach / what is / how / why / didn't understand
+        PatternConfig(r"(പറഞ്ഞുതരാമോ|പറഞ്ഞു തരാമോ|പറഞ്ഞുതരൂ|വിശദീകരിക്ക|പഠിപ്പിക്ക|എന്താണ്|എങ്ങനെ|എന്തുകൊണ്ട്|മനസ്സിലായില്ല)", 0.90, is_strong=True),
     ],
     # Learner asks to be checked (fast brain, check mode: one gentle question)
     "quiz_request": [
         PatternConfig(r"\b(quiz|test|check)\s+(me|my)\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
         PatternConfig(r"\bask me (a |some )?(question|questions)\b", CONFIDENCE_EXACT_MATCH, is_strong=True),
         PatternConfig(r"\b(practice|revision) (question|questions)\b", 0.90, is_strong=True),
+        PatternConfig(r"(క్విజ్|ప్రశ్న అడుగు|ప్రశ్నలు అడుగు|టెస్ట్ చేయి|పరీక్ష పెట్టు)", 0.95, is_strong=True),
+        PatternConfig(r"(ക്വിസ്|ചോദ്യം ചോദിക്ക|ചോദ്യങ്ങൾ ചോദിക്ക|ടെസ്റ്റ് ചെയ്യ|പരീക്ഷിക്ക)", 0.95, is_strong=True),
     ],
     # Report requests (slow brain)
     "report_request": [

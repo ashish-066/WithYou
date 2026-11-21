@@ -90,6 +90,7 @@ INSTRUCTIONS = {
     ),
 }
 
+# Goodbyes the app says itself (not the model), in the session's language
 CLOSING_MESSAGES = {
     "completed": "That was a great session! You did really well today. See you next time, bye!",
     "candidate_ended": "Okay, let's stop here for today. Nice work, see you next time!",
@@ -101,8 +102,34 @@ CLOSING_MESSAGES = {
     "user_ended": "Thanks for studying with me today. Bye!",
 }
 
-def closing_message(end_reason: str | None) -> str:
-    return CLOSING_MESSAGES.get(end_reason or "completed", CLOSING_MESSAGES["completed"])
+CLOSING_MESSAGES_BY_LANGUAGE = {
+    "en-IN": CLOSING_MESSAGES,
+    "te-IN": {
+        "completed": "ఈ రోజు సెషన్ చాలా బాగా జరిగింది! నువ్వు బాగా నేర్చుకున్నావు. మళ్ళీ కలుద్దాం, బై!",
+        "candidate_ended": "సరే, ఈ రోజుకి ఇక్కడ ఆపేద్దాం. బాగా చేశావు, మళ్ళీ కలుద్దాం!",
+        "time_limit": "మనం చాలా సేపు చదివాం, కొంచెం విరామం తీసుకుందాం. ఈ రోజు బాగా చేశావు. బై!",
+        "turn_limit": "ఒక్క సెషన్‌లో చాలా నేర్చుకున్నాం! ఇక్కడ ఆపేద్దాం. బాగా చేశావు, బై!",
+        "no_response": "నువ్వు కాసేపు దూరంగా వెళ్ళినట్టున్నావు, ఇక్కడ ఆపుదాం. ఎప్పుడైనా తిరిగి రా. బై!",
+        "disconnected": "సెషన్ ముగిసింది. ఎప్పుడైనా తిరిగి రా!",
+        "abandoned": "సెషన్ ముగిసింది. ఎప్పుడైనా తిరిగి రా!",
+        "user_ended": "ఈ రోజు నాతో చదివినందుకు థాంక్స్. బై!",
+    },
+    "ml-IN": {
+        "completed": "ഇന്നത്തെ സെഷൻ അടിപൊളിയായിരുന്നു! നീ നന്നായി പഠിച്ചു. അടുത്ത തവണ കാണാം, ബൈ!",
+        "candidate_ended": "ശരി, ഇന്നത്തേക്ക് ഇവിടെ നിർത്താം. നന്നായി ചെയ്തു, അടുത്ത തവണ കാണാം!",
+        "time_limit": "നമ്മൾ കുറേ നേരം പഠിച്ചു, ഇനി ഒരു ബ്രേക്ക് എടുക്കാം. ഇന്ന് നന്നായി ചെയ്തു. ബൈ!",
+        "turn_limit": "ഒരു സെഷനിൽ ഒരുപാട് പഠിച്ചു! ഇവിടെ നിർത്താം. നന്നായി ചെയ്തു, ബൈ!",
+        "no_response": "നീ കുറച്ച് മാറി പോയെന്ന് തോന്നുന്നു, ഇവിടെ നിർത്താം. എപ്പോ വേണമെങ്കിലും തിരിച്ചു വരാം. ബൈ!",
+        "disconnected": "സെഷൻ അവസാനിച്ചു. എപ്പോ വേണമെങ്കിലും തിരിച്ചു വരാം!",
+        "abandoned": "സെഷൻ അവസാനിച്ചു. എപ്പോ വേണമെങ്കിലും തിരിച്ചു വരാം!",
+        "user_ended": "ഇന്ന് എന്റെ കൂടെ പഠിച്ചതിന് നന്ദി. ബൈ!",
+    },
+}
+
+
+def closing_message(end_reason: str | None, language: str | None = None) -> str:
+    messages = CLOSING_MESSAGES_BY_LANGUAGE.get(language or "en-IN", CLOSING_MESSAGES)
+    return messages.get(end_reason or "completed", messages["completed"])
 
 
 # =============================================================================
@@ -148,6 +175,15 @@ _ASKING = re.compile(
 )
 
 
+# Telugu and Malayalam (as Sarvam transcribes them): plain substrings
+_GOODBYE_NATIVE = (
+    "బై", "ఆపేద్దాం", "ఆపుదాం", "ఇక చాలు", "ఈ రోజుకి చాలు", "ఇంక చాలు",
+    "ബൈ", "നിർത്താം", "മതി", "ഇന്നത്തേക്ക് മതി",
+)
+_YES_NATIVE = ("అవును", "సరే", "ఓకే", "అలాగే", "അതെ", "ശരി", "ഓക്കെ", "ആം")
+_NO_NATIVE = ("వద్దు", "కాదు", "ఇంకా", "కొనసాగిద్దాం", "വേണ്ട", "ഇല്ല", "തുടരാം", "ഇനിയും")
+
+
 def wants_to_stop(text: str) -> bool:
     """A goodbye or "I want to stop", as opposed to these words inside an answer.
 
@@ -156,12 +192,14 @@ def wants_to_stop(text: str) -> bool:
     early needs a confirmation (see before_candidate_turn).
     """
     t = text.strip()
-    return any(p.search(t) for p in _GOODBYE)
+    return any(p.search(t) for p in _GOODBYE) or any(w in t for w in _GOODBYE_NATIVE)
 
 
 def confirms(text: str) -> bool:
     t = text.strip()
-    return bool(_YES.search(t)) and not _NO.search(t)
+    yes = bool(_YES.search(t)) or any(w in t for w in _YES_NATIVE)
+    no = bool(_NO.search(t)) or any(w in t for w in _NO_NATIVE)
+    return yes and not no
 
 
 def has_no_more_questions(text: str) -> bool:

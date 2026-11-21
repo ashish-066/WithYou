@@ -96,14 +96,26 @@ Respond in JSON format:
 # Router intent -> what the buddy does this turn
 MODES = {"explain_request": "explain", "quiz_request": "check"}
 
+_NATIVE_STYLE = (
+    "Use simple, everyday spoken {name} in {name} script, the way a friend talks, not textbook "
+    "language. English technical terms are fine where people normally say them in English "
+    "(for example: photosynthesis, chlorophyll, DNA), written in English letters. "
+)
 LANGUAGE_RULES = {
-    "en": "Reply in English.",
-    "ml": (
-        "Reply in natural, spoken Malayalam (Malayalam script). Use simple everyday words; "
-        "English technical terms are fine where Malayalis would normally say them in English. "
-        "If the learner speaks English, you may answer in English."
-    ),
+    "en-IN": "Reply in English.",
+    "ml-IN": _NATIVE_STYLE.format(name="Malayalam") + "Reply in Malayalam.",
+    "te-IN": _NATIVE_STYLE.format(name="Telugu") + "Reply in Telugu.",
 }
+SWITCH_RULE = (
+    " The learner may switch language at any time: if they speak to you in another language "
+    "(Malayalam, Telugu or English) or ask you to switch, reply in that language from then on."
+)
+
+
+def language_rule(state: InterviewState) -> str:
+    """Reply in the language the learner is speaking now (or the session's start language)."""
+    lang = state.get("language") or settings.buddy_language
+    return LANGUAGE_RULES.get(lang, LANGUAGE_RULES["ml-IN"]) + SWITCH_RULE
 
 
 def turn_mode(state: InterviewState) -> str:
@@ -165,7 +177,7 @@ async def conversation_tool(
             user_message=input_data.user_message,
             interviewer_instruction=state.get("interviewer_instruction") or "None",
             mode=turn_mode(state),
-            language_rule=LANGUAGE_RULES.get(settings.buddy_language, LANGUAGE_RULES["en"]),
+            language_rule=language_rule(state),
         )
 
         # Generate response (pass user_input for firewall analysis)

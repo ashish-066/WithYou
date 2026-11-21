@@ -1,10 +1,17 @@
 """Pydantic models for API request/response schemas."""
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
 class CreateCallRequest(BaseModel):
     """Request to start a study session (signed-in learner only)."""
+
+    # Starting language; the learner can switch by speaking another one
+    language: Literal["ml-IN", "te-IN", "en-IN"] = Field(
+        default="ml-IN", description="Language the buddy starts in"
+    )
 
     candidate_name: str = Field(
         default="Learner",

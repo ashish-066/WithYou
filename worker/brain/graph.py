@@ -29,6 +29,7 @@ from brain.brains.router import (
 )
 from brain.brains.slow_brain import slow_brain_node
 from brain.interview_flow import closing_message
+from brain.services.reply_publisher import publish_reply_early
 from brain.state import InterviewState, create_default_dfa_state
 from brain.tools.slow.report_generator import (
     generate_analytics_report,
@@ -86,85 +87,33 @@ async def response_finalizer_node(state: InterviewState) -> dict[str, Any]:
 
 
 async def conclude_interview_node(state: InterviewState) -> dict[str, Any]:
-    """Conclude the interview and generate final reports.
-
-    This node:
-    1. Processes any remaining pending claims
-    2. Calculates final trust score
-    3. Marks interview as ended
-    4. Triggers report generation
-    5. Prepares final response
-    """
-    from brain.brains.slow_brain import _calculate_trust_score, _verify_single_claim
-    from brain.state import VerificationResult
-
+    """End the session: say goodbye first, then write the session report."""
     session_id = state.get("session_id", "unknown")
-    logger.info(f"[CONCLUDE] Session {session_id}: Concluding interview")
+    logger.info(f"[CONCLUDE] Session {session_id}: Concluding session")
 
-    # Process any remaining pending claims before generating reports
-    pending_claims = state.get("pending_claims", [])
-    verified_claims = list(state.get("verified_claims", []))
-    candidate_profile = state.get("candidate_profile")
+    # Goodbye in the session's language (brain/interview_flow.py). Spoken before
+    # the report is written, so the learner isn't left waiting on it.
+    end_reason = state.get("end_reason") or "completed"
+    response = closing_message(end_reason, state.get("language"))
+    await publish_reply_early(response)
 
-    if pending_claims:
-        logger.info(
-            f"[CONCLUDE] Session {session_id}: Processing {len(pending_claims)} "
-            "remaining pending claims"
-        )
-        for claim in pending_claims:
-            if candidate_profile:
-                result = await _verify_single_claim(claim, candidate_profile)
-            else:
-                # No profile data - mark as unverified (no trust penalty)
-                result = VerificationResult(
-                    claim=claim,
-                    evidence=[],
-                    verdict="unverified",
-                    confidence=0.0,
-                    reasoning="No candidate profile data available for verification",
-                    suggested_followup=None,
-                )
-            verified_claims.append(result)
-
-    # Calculate final trust score
-    trust_score = _calculate_trust_score(verified_claims)
-
-    # Create updated state for report generation
-    # This ensures reports use the final claim verification data
-    updated_state = dict(state)
-    updated_state["pending_claims"] = []
-    updated_state["verified_claims"] = verified_claims
-    updated_state["trust_score"] = trust_score
-
-    # Generate reports
     report_status: Literal["not_started", "pending", "in_progress", "completed", "failed"] = "in_progress"
     descriptive_report = None
     analytics_data = None
-
     try:
-        # Generate descriptive report with updated state
-        desc_result = await generate_descriptive_report(updated_state)
+        desc_result = await generate_descriptive_report(state)
         if desc_result.success:
             descriptive_report = desc_result.data
-
-        # Generate analytics report with updated state
-        analytics_result = await generate_analytics_report(updated_state)
+        analytics_result = await generate_analytics_report(state)
         if analytics_result.success:
             analytics_data = analytics_result.data
-
-        # "failed": retried by the worker's sweep, and from the report page
+        # "failed": retried by the worker's sweep
         report_status = "completed" if descriptive_report else "failed"
     except Exception as e:
         logger.error(f"[CONCLUDE] Report generation failed: {e}")
         report_status = "failed"
 
-    # Closing words match how the interview ended (brain/interview_flow.py)
-    end_reason = state.get("end_reason") or "completed"
-    response = closing_message(end_reason)
-
-    # Update DFA to concluding state
-    dfa = state.get("dfa", create_default_dfa_state())
-    dfa = dict(dfa)
+    dfa = dict(state.get("dfa", create_default_dfa_state()))
     dfa["current_state"] = "concluding"
 
     return {
@@ -175,9 +124,6 @@ async def conclude_interview_node(state: InterviewState) -> dict[str, Any]:
         "analytics_data": analytics_data,
         "response": response,
         "dfa": dfa,
-        "pending_claims": [],
-        "verified_claims": verified_claims,
-        "trust_score": trust_score,
         "last_updated": datetime.now(timezone.utc).isoformat(),
     }
 

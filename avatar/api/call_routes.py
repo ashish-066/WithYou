@@ -20,9 +20,11 @@ from api.schemas import (
 from core.auth import AuthStore, User, ensure_session_user_access, require_user
 from core.config import settings
 from core.rate_limit import rate_limit
+from core.redis import get_redis_client
 from services import active_calls
 from services.call_finisher import finish_call
 from services.livekit_service import livekit_service
+from services.streams import AvatarStreamManager
 
 logger = logging.getLogger(__name__)
 
@@ -67,10 +69,22 @@ async def create_call(request: CreateCallRequest, user: User = Depends(require_u
             "candidate_name": name,
             "org_id": user.org_id,
             "user_id": user.user_id,
+            "language": request.language,
             "livekit_url": settings.livekit_url,
             "created_at": datetime.now(UTC).isoformat(),
             "status": "created",
         })
+        # The brain starts in the chosen language (the voice agent reads it from the call)
+        redis = get_redis_client()
+        try:
+            await AvatarStreamManager(redis).publish_transcription(
+                session_id=session_id,
+                content="",
+                message_type="system_init",
+                extra_fields={"language": request.language},
+            )
+        finally:
+            await redis.aclose()
         await record(
             "call.start", actor_type="user", actor_id=user.user_id,
             org_id=user.org_id, target_type="interview", target_id=session_id,

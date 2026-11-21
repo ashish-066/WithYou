@@ -1,8 +1,7 @@
-"""LLM Pool with sharding for Gemini models.
+"""LLM Pool: Sarvam-105B for the spoken replies, Gemini behind it and for analysis.
 
-Implements a connection pool pattern for horizontal and vertical scaling:
-- Fast Pool: Gemini Flash Lite (low latency, good for conversation)
-- Slow Pool: Gemini Flash (high capability, good for analysis)
+- Fast Pool: Sarvam-105B first (Indian languages), then the Gemini fallback list
+- Slow Pool: Gemini (reports, scoring, structured JSON)
 
 Pool provides round-robin load balancing across multiple client instances
 and automatic failover across candidate models.
@@ -12,9 +11,11 @@ import asyncio
 import json
 import logging
 import os
+import time
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+import httpx
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -78,6 +79,60 @@ SLOW_BRAIN_CONFIG = LLMConfig(
 
 
 # =============================================================================
+# Sarvam (OpenAI-compatible chat completions)
+# =============================================================================
+
+SARVAM_CHAT_URL = "https://api.sarvam.ai/v2/chat/completions"
+_sarvam_http: httpx.AsyncClient | None = None
+
+
+def _sarvam_enabled() -> bool:
+    from core.config import settings
+
+    return bool(settings.sarvam_api_key) and settings.fast_llm_provider == "sarvam"
+
+
+async def sarvam_generate(
+    prompt: str,
+    system_instruction: str | None,
+    temperature: float,
+    max_tokens: int,
+) -> str:
+    """One chat completion from Sarvam. Raises on any failure or an empty answer.
+
+    reasoning_effort="none": the model otherwise spends its whole token budget on
+    hidden reasoning (empty answer at 1024 tokens; ~6 s with "low", ~1 s with "none").
+    """
+    from core.config import settings
+
+    global _sarvam_http
+    if _sarvam_http is None:
+        _sarvam_http = httpx.AsyncClient(timeout=settings.sarvam_llm_timeout_seconds)
+    messages = [{"role": "user", "content": prompt}]
+    if system_instruction:
+        messages.insert(0, {"role": "system", "content": system_instruction})
+    response = await _sarvam_http.post(
+        SARVAM_CHAT_URL,
+        headers={
+            "api-subscription-key": settings.sarvam_api_key,
+            "Authorization": f"Bearer {settings.sarvam_api_key}",
+        },
+        json={
+            "model": settings.sarvam_llm_model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "reasoning_effort": settings.sarvam_reasoning_effort,
+        },
+    )
+    response.raise_for_status()
+    content = (response.json()["choices"][0]["message"].get("content") or "").strip()
+    if not content:
+        raise RuntimeError("Sarvam returned an empty answer")
+    return content
+
+
+# =============================================================================
 # LLM Wrapper
 # =============================================================================
 
@@ -135,6 +190,26 @@ class LLMClient:
             )
 
         sys_inst = system_instruction or self.system_instruction
+
+        # Spoken replies: Sarvam-105B first; on any failure, the Gemini list below
+        if self.brain_type == "fast" and _sarvam_enabled():
+            started = time.perf_counter()
+            try:
+                text = await sarvam_generate(
+                    prompt,
+                    sys_inst,
+                    temperature or self.config.temperature,
+                    max_tokens or self.config.max_output_tokens,
+                )
+                self.request_count += 1
+                logger.info(f"[LLM] sarvam answered in {time.perf_counter() - started:.2f}s")
+                return text
+            except Exception as e:
+                logger.warning(
+                    f"[LLM] Sarvam failed after {time.perf_counter() - started:.2f}s "
+                    f"({type(e).__name__}: {str(e)[:120]}); falling back to Gemini"
+                )
+
         gen_config = types.GenerateContentConfig(
             system_instruction=sys_inst,
             temperature=temperature or self.config.temperature,
@@ -363,30 +438,18 @@ class GeminiLLMPool:
         }
 
     def _get_fast_brain_system_prompt(self) -> str:
-        """System prompt for fast brain (conversation-focused)."""
-        return """You are an AI interviewer conducting first-round technical interviews.
-
-Your role in this mode (Fast Brain):
-- Respond quickly and conversationally
-- Ask relevant follow-up questions
-- Keep responses concise (2-4 sentences)
-- Note any claims that should be verified
-- Maintain a professional but friendly tone
-
-Guidelines:
-- Never fabricate information about the candidate
-- If unsure, ask clarifying questions
-- Stay on topic with the interview rubric
-- Identify verifiable claims (companies, projects, skills)"""
+        """System prompt for the fast brain (the study buddy's spoken replies)."""
+        return """You are a warm, encouraging study buddy talking with a learner by voice.
+Reply quickly, briefly and kindly, in plain spoken sentences. Follow the task and the output
+format you are given exactly. Never grade or judge the learner."""
 
     def _get_slow_brain_system_prompt(self) -> str:
         """System prompt for slow brain (analysis-focused)."""
-        return """You are an AI system performing deep analysis for technical interviews.
+        return """You are an AI system doing careful analysis for a study-buddy app.
 
 Your role in this mode (Slow Brain):
-- Analyze candidate profiles thoroughly
-- Generate comprehensive evaluation reports
-- Verify claims against evidence
+- Track what the learner understands, from their own words
+- Write kind, encouraging session summaries for the learner
 - Provide structured, data-rich outputs
 
 Guidelines:

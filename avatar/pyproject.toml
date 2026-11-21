@@ -23,6 +23,7 @@ dependencies = [
     # Async utilities
     "python-dotenv>=1.0",
     "alex-db",
+    "livekit-plugins-sarvam==1.8.10",
 ]
 
 [project.optional-dependencies]

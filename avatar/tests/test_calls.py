@@ -50,6 +50,18 @@ async def test_concurrent_end_requests_clean_up_once(client, monkeypatch):
     assert len(deleted) == 1  # only one request did the cleanup
 
 
+async def test_call_records_the_language_and_tells_the_brain(client, redis):
+    await signup(client)
+    call = (await client.post("/calls/", json={"candidate_name": "Ann", "language": "te-IN"})).json()
+    from services import active_calls
+
+    assert (await active_calls.get(call["call_id"]))["language"] == "te-IN"
+    inits = [d for _, d in await redis.xrange("interview:requests") if d["message_type"] == "system_init"]
+    assert [(d["session_id"], d["language"]) for d in inits] == [(call["session_id"], "te-IN")]
+    # Unsupported languages are refused
+    assert (await client.post("/calls/", json={"language": "fr-FR"})).status_code == 422
+
+
 async def test_call_dispatches_our_named_agent(client, monkeypatch):
     dispatched = []
 

@@ -92,3 +92,16 @@ Ashish heard nothing. What I found:
 Ashish doesn't speak Malayalam and wants Telugu too (so he can judge quality himself).
 - Bulbul v3 TTS samples (`spikes/out/buddy_{te-IN,ml-IN}_{shubh,kavya}.wav`) are all HTTP 200, about 2.2 s (first call 9 s, cold).
 - Saaras v3 STT round trip on those samples gave **exact** transcripts in both languages, about 1.2 s each (te-IN, ml-IN).
+
+## Phase 2, part A: brain + API in Malayalam/Telugu on Sarvam-105B ✅ (automated)
+- **Decisions (Ashish):** languages are **Malayalam + Telugu (+ English)**, switchable **mid-conversation**. A start-screen picker sets the starting language. Default voice **Kavya** (Bulbul v3).
+- **Switching is verified feasible:** Sarvam realtime STT with `language=auto` streamed a Telugu clip, then a Malayalam clip, in one session. Both finals were word-perfect and tagged `te-IN` / `ml-IN`.
+- **API:** `POST /calls/` takes `language` (`ml-IN` default | `te-IN` | `en-IN`; anything else → 422). It's stored on the call (the voice agent reads it) and sent to the brain as `system_init {language}`. A language-only `system_init` saves state and **does not reply** (the agent greets; a reply would talk over it).
+- **Brain language:** `state["language"]` comes from setup and then follows each turn's `language` field (sent by the agent from speech recognition; additive stream field, no contract change). The prompt's language rule follows it and lets the learner switch at any time. Closing goodbyes come in te/ml/en (`CLOSING_MESSAGES_BY_LANGUAGE`). **Ashish: please check the Telugu wording.**
+- **Telugu/Malayalam intents:** native-script patterns for explain / quiz / goodbye in the router, and stop/yes/no in the flow (substring matches, because `\b` breaks inside Indic words).
+- **Sarvam-105B is the primary brain** (`FAST_LLM_PROVIDER=sarvam`) for spoken replies; the Gemini list is the automatic fallback; analysis and reports stay on Gemini. **Key finding:** sarvam-105b spends its whole token budget on hidden reasoning (empty answer at 1024 tokens; 6.2 s with `low`). **`reasoning_effort: "none"` gives 1.0 s and valid JSON.**
+- **Removed the per-answer interview scorer** (`response_scorer`: "communication"/"technical_depth" grades via a second model call after every reply). It held the session lock 1–6 s per turn; grading is a non-goal, and Phase 3 tracks understanding instead. **Whole turns now take 0.7–1.3 s (was 6–15 s).**
+- **Bug fixed (from Phase 0):** the conclude node imported claim-verification helpers I'd deleted, so every session end crashed in the worker (hidden by the mocked graph in tests; the UI still ended). Rewritten: the goodbye is published **before** the report is written. Added an AST scan of every import, including lazy ones, in both services: 0 broken.
+- **Also fixed (Phase 1 miss):** the fast-brain system prompt still said "AI interviewer".
+- **Tests:** new `worker/tests/test_languages.py` (15) covers Sarvam first / Gemini on failure / analysis stays Gemini / reasoning off, language follows setup then speech, te/ml intents, native goodbye → confirm → goodbye in that script, and goodbye spoken before the report. Worker **90 passed**, avatar **49 passed**.
+- **Real-brain smoke (Sarvam):** Telugu explain → quiz → half-answer coaching ("అవును, కరెక్ట్! … కానీ…") → switch to Malayalam on request. Each Sarvam answer took 0.7–1.3 s.
