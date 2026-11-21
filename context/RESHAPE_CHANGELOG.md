@@ -86,3 +86,4 @@ Ashish heard nothing. What I found:
 - worker **75 passed**, avatar **47 passed**; reply-before-scoring test (`test_processor_early_reply`) still green.
 - **Real-brain smoke test** (real graph + Gemini, no voice): a tired "hi" got an empathetic chat reply; "Teach me about photosynthesis" got a warm 3-sentence explanation with an analogy and an offer to go deeper or check; "quiz me" got one gentle question; a half answer got praise for the right part and a hint for the rest, with no grading. 2.5–4.4 s per full turn (the reply is published before scoring).
 - **[ASK ASHISH] pending:** voice test, "Teach me about photosynthesis".
+- **[ASK ASHISH] Phase 1 manual test: PASSED (2026-11-21).** It feels like a buddy; explain/quiz/goodbye work by voice. **Phase 1 exit checkpoint met.**
