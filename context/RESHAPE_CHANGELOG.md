@@ -134,3 +134,9 @@ Ashish: it works, but the voice breaks. Diagnosis from the session transcript in
 - **Browser (new):** the mic is captured with `voiceIsolation` (OS/browser voice focus, Chrome/Safari where supported), `noiseSuppression`, `echoCancellation`, `autoGainControl`.
 - **Option 2, ready but not enabled:** `INTERRUPT_MIN_DURATION` / `INTERRUPT_MIN_WORDS` in `avatar/.env` (default 0.8 s / 2 words; for a noisy hall try 1.2 / 3).
 - **Recommendation for the demo:** a headset mic (closest voice wins) is the single biggest help against hall chatter.
+
+## Phase 2 manual test, round 2: "something is happening", "it went on a loop" (2026-11-22)
+- The transcript showed "learner" turns every 4–10 s (garbled Kannada/Hindi/English: "Straight Time maadodu", "क्या तो है?", "Poco phone"). Ashish: **nobody was talking**, and it looped.
+- **Corrected diagnosis: echo, not people nearby.** On laptop speakers the buddy's own Bulbul voice came back through the mic. Sarvam STT (language auto) transcribed it as garbled "other languages". That cut the buddy off mid-sentence (the breaking), and then it answered its own echo (the loop). Browser echo cancellation wasn't enough.
+- **Fix (Ashish chose "harder to interrupt"):** interruptions are **off by default** (`ALLOW_INTERRUPTIONS=false`), with `discard_audio_if_uninterruptible=True`, so mic audio is thrown away while the buddy speaks. All `session.say` calls follow the setting (they used to force `allow_interruptions=True`). If barge-in is turned back on, the thresholds are now 1.2 s / 3 words. Trade-off: the learner can't interrupt the buddy mid-sentence (replies are short).
+- Test: `test_buddy_cannot_be_cut_off_by_its_own_echo_by_default`. Avatar **54 passed**.

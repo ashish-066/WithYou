@@ -88,10 +88,12 @@ class Settings(BaseSettings):
     stt_language: str = "auto"  # Sarvam realtime STT: detects the language per utterance
     tts_model: str = "bulbul:v3"
     tts_speaker: str = "kavya"
-    # How much learner speech it takes to cut the buddy off mid-sentence. For a
-    # noisy hall try 1.2 s / 3 words, so chatter can't break its sentences.
-    interrupt_min_duration: float = 0.8
-    interrupt_min_words: int = 2
+    # Can the learner cut the buddy off mid-sentence? Off: the buddy's own voice
+    # from laptop speakers kept interrupting it (echo loop). With it on, this much
+    # speech is needed to interrupt.
+    allow_interruptions: bool = False
+    interrupt_min_duration: float = 1.2
+    interrupt_min_words: int = 3
     # Sarvam (Malayalam STT/TTS and the sarvam-105b brain); https://dashboard.sarvam.ai
     sarvam_api_key: str = ""
 

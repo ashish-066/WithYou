@@ -59,3 +59,11 @@ def test_interruptions_require_words():
 
     assert interruption["min_words"] >= 2
     assert interruption["resume_false_interruption"] is True
+
+
+def test_buddy_cannot_be_cut_off_by_its_own_echo_by_default():
+    # Laptop speakers: the buddy's voice came back through the mic, interrupted it
+    # and became a "learner" turn, in a loop. Mic audio is discarded while it speaks.
+    interruption = TURN_HANDLING["interruption"]
+    assert interruption["enabled"] is False
+    assert interruption["discard_audio_if_uninterruptible"] is True

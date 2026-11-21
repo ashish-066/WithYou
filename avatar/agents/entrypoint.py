@@ -59,6 +59,11 @@ logger = logging.getLogger(__name__)
 TURN_HANDLING = {
     "endpointing": {"min_delay": 0.5, "max_delay": 3.0},
     "interruption": {
+        # Off by default: on laptop speakers the buddy heard its own voice, cut
+        # itself off and answered its own echo in a loop. While it speaks, the mic
+        # audio is thrown away instead (ALLOW_INTERRUPTIONS=true brings barge-in back).
+        "enabled": settings.allow_interruptions,
+        "discard_audio_if_uninterruptible": True,
         # Presence's audio is paused as soon as candidate speech is detected. Requiring
         # transcribed words stops coughs, keyboard noise and echo from cutting
         # Presence off mid-sentence (the "voice breaking").
@@ -239,7 +244,7 @@ async def listen_for_brain_responses(
                     before_speaking(message.content)
                 await session.say(
                     message.content,
-                    allow_interruptions=True,
+                    allow_interruptions=settings.allow_interruptions,
                 )
                 logger.info(f"[BRAIN->TTS] Finished speaking response {message.message_id}")
             except Exception as e:
@@ -354,7 +359,7 @@ async def entrypoint(ctx: JobContext) -> None:
                         text = lang.nudge(action.key, voice.language) or action.text
                         await _record_line(redis, session_id, text)
                         voice.prepare(text)
-                        session.say(text, allow_interruptions=True)
+                        session.say(text, allow_interruptions=settings.allow_interruptions)
                     except Exception as e:
                         monitor.prompt_failed()
                         logger.warning(f"[MONITOR] Could not speak nudge: {e}")
@@ -430,7 +435,7 @@ async def entrypoint(ctx: JobContext) -> None:
         greeting = lang.greeting(start_language)
         voice.prepare(greeting)
         logger.info(f"Speaking initial greeting for session {session_id}")
-        await session.say(greeting, allow_interruptions=True)
+        await session.say(greeting, allow_interruptions=settings.allow_interruptions)
         logger.info(f"Initial greeting complete for session {session_id}")
 
         # Once a second: apply the clock rules, and hang up when the session is over
