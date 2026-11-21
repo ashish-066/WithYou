@@ -87,8 +87,8 @@ export function RecapCard({ sessionId, language }: { sessionId: string; language
         </div>
       )}
       {recap.next_time && (
-        <div className="sticky relative mt-5 rotate-[-1deg] rounded-[3px] px-4 py-3">
-          <h3 className="font-hand text-[22px] leading-6 text-terracotta">{t.recapNext}</h3>
+        <div className="mt-4 border-t border-line pt-3">
+          <h3 className="text-meta text-muted">{t.recapNext}</h3>
           <p className="mt-1 text-body text-ink">{recap.next_time}</p>
         </div>
       )}

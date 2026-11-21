@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { cx } from '@/ui/cx';
 import { Buddy } from './Buddy';
 import { useSessions, useStats, useSuggestions } from './data';
-import { MarginNote, Scribble, SpeechBubble, StickyNote } from './notebook';
+import { MarginNote, Scribble, SpeechBubble } from './notebook';
 import { usePrefs } from './prefs';
 import { TOPIC_SUGGESTIONS, partOfDay, strings } from './strings';
 
@@ -109,9 +109,8 @@ export function HomePage() {
 
       {/* pick up where you left off: a sticky note */}
       {resume && (
-        <section aria-labelledby="continue-title" className="px-1 pt-2">
-          <StickyNote tilt={-1.2}>
-            <h2 id="continue-title" className="font-hand text-[22px] leading-6 text-terracotta">
+        <section aria-labelledby="continue-title" className="sketch-soft bg-surface px-5 py-4">
+            <h2 id="continue-title" className="text-meta text-muted">
               {t.continueTitle}
             </h2>
             <p className="mt-1 font-display text-h3 font-bold text-ink">{resume.topic}</p>
@@ -139,7 +138,6 @@ export function HomePage() {
               {t.continueCta}
               <ArrowRight size={18} aria-hidden />
             </button>
-          </StickyNote>
         </section>
       )}
 
@@ -149,12 +147,11 @@ export function HomePage() {
           <Scribble>{personal.length ? t.forYou : t.quickTopics}</Scribble>
         </h2>
         <ul className="mt-4 flex flex-wrap gap-2.5">
-          {quick.map((topic, i) => (
+          {quick.map((topic) => (
             <li key={topic}>
               <button
                 onClick={() => navigate(sessionUrl('study', topic))}
-                className="sketch-soft bg-surface px-4 py-2 text-body text-ink transition-transform hover:-rotate-1"
-                style={{ transform: `rotate(${(i % 3) - 1}deg)` }}
+                className="sketch-soft bg-surface px-4 py-2 text-body text-ink"
               >
                 {topic}
               </button>
@@ -173,7 +170,7 @@ export function HomePage() {
             <li key={m.id}>
               <button
                 onClick={() => navigate(sessionUrl('talk', m.label))}
-                className="sketch-soft bg-turmeric-soft px-4 py-2 text-body text-ink transition-transform hover:rotate-1"
+                className="sketch-soft bg-surface px-4 py-2 text-body text-ink"
               >
                 {m.label}
               </button>
