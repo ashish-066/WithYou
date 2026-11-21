@@ -11,6 +11,7 @@ import { cx } from '@/ui/cx';
 import { useSession, useSessions } from './data';
 import { sessionUrl } from './HomePage';
 import { usePrefs } from './prefs';
+import { LevelBadge } from './ProgressProfile';
 import { strings, type Strings } from './strings';
 
 function dayLabel(iso: string | null, t: Strings, language: BuddyLanguage) {
@@ -65,7 +66,8 @@ export function HistoryPage() {
                     </span>
                     <span className="block truncate text-meta text-muted">
                       {timeLabel(s.created_at, language)}
-                      {s.mode === 'study' && s.ideas_total > 0 && ` · ${t.ideasOf(s.ideas_understood, s.ideas_total)}`}
+                      {s.mode === 'study' && s.level && ` · ${t.levels[s.level]}`}
+                      {s.mood && ` · ${t.moodNames[s.mood.label]}`}
                       {s.title && ` · ${s.title}`}
                     </span>
                   </span>
@@ -117,7 +119,13 @@ export function SessionDetailPage() {
               <h1 className="font-display text-h2">{s.mode === 'talk' ? t.justTalk : s.topic || t.noTopic}</h1>
               <p className="text-body text-muted">
                 {dayLabel(s.created_at, t, language)} · {timeLabel(s.created_at, language)}
+                {s.mood && ` · ${t.moodNames[s.mood.label]}`}
               </p>
+              {s.mode === 'study' && s.level && (
+                <div className="mt-2">
+                  <LevelBadge level={s.level} label={t.levels[s.level]} />
+                </div>
+              )}
             </div>
           </header>
 
@@ -139,6 +147,7 @@ export function SessionDetailPage() {
               <h2 id="ideas-title" className="text-meta text-muted">
                 {t.keyIdeas} · {t.ideasOf(s.ideas_understood, s.ideas_total)}
               </h2>
+              <p className="mt-0.5 text-meta text-muted">{t.conceptsHelp}</p>
               <ul className="mt-2 space-y-2">
                 {s.ideas.map((idea, i) => (
                   <li key={i} className="flex items-start gap-3 rounded-ui border border-line bg-surface px-4 py-3">

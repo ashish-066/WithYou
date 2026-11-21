@@ -270,3 +270,24 @@ Plan written to `context/plan.md` (Phase 6). Built:
   - **/session:** auto-starts from the tap, with a connecting animation → room → recap with Home / Again
   - Login and 404 rebranded (no more "Presence View"); the old recruiter dashboard frame was removed; the PWA starts at `/`
 - **Verified:** screenshots at 390×844 (and 1280 desktop) of login, Home, Learn, History, detail, Progress and Profile, with a seeded demo learner (`demo.learner@studybuddy.local` / `demo-password-123`, 4 Telugu sessions in the dev DB). Build + PWA check OK.
+
+## Phase 7: Personal, multilingual, tracks feelings and learning (2026-11-22)
+Ashish's feedback (and "if stuck, note it and move ahead"). Done:
+- **History fixed:** found in the real data:
+  - the brain's placeholder topic "not chosen yet" was shown as a topic
+  - connect-and-leave sessions with no learner turns cluttered the list
+  - talk sessions got topics ("humor")
+  - pre-migration sessions had no mode/language
+  
+  Now: empty sessions are hidden, placeholders are never topics, talk sessions have no topic, and the language is inferred from the transcript script for old sessions. The worker also stops saving placeholder topics, and saves `mode`, `self_mood` (mood chip) and `crisis`.
+- **"Pick up where you left off" in the chosen language:** saved text (topic, recap title/summary/next-time, concepts, suggestions) is translated to the UI language with **Sarvam Translate** (`sarvam-translate:v1`, verified live; Redis-cached 30 days; the original on any failure). `?lang=` on all `/me` endpoints. Verified: a Malayalam "സൗരയൂഥം" session shows as "సౌర వ్యవస్థ" in the Telugu UI.
+- **Suggestions from your own history:** `GET /me/suggestions` returns unfinished topics (with their next open concept) and the topics the buddy suggested next at the end of sessions. The recap now returns `suggested_next` (real brain: "ఆక్సిజన్ విడుదల, మొక్కల శ్వాసక్రియ, ఆకుల నిర్మాణం"). Home: the continue card comes from it, and "నీ కోసం / For you" chips; defaults only for new learners.
+- **"Ideas" → "Concepts"** (కాన్సెప్ట్స్ / കൺസെപ്റ്റുകൾ) everywhere, with a one-line explainer.
+- **Feelings and learning levels:**
+  - The recap call also returns a gentle **mood read** (level 1–5 + label from a fixed set; validated, else dropped). Real brain: `{level: 4, label: happy}`.
+  - `GET /me/stats` adds a 14-day mood timeline, a summary (average / trend / most common), a **learning level** per topic (Just started / Getting there / Confident, from the share of concepts understood), and `crisis_recent`.
+  - **Insights** screen (was Progress): streak, a "how you've been feeling" chart + gentle summary, learning level badges, the concepts explainer, an "only you can see this, not a diagnosis" note, and a Tele-MANAS nudge if crisis language came up recently. History and session detail show the level and mood too.
+- **Tests:** worker **136**; avatar **67** (+ history filters, suggestions, insights, translation display, translate cache/fallback). Verified at 390×844 with the demo learner.
+- **Noted, not done:**
+  - the in-session recap card (`/calls/recap`) is shown in the session's own language, which matches the UI unless the learner switched language mid-session
+  - mood reads exist only for sessions recorded from now on (older ones show no mood)

@@ -52,15 +52,27 @@ export type Strings = {
   signOut: string;
   loading: string;
   back: string;
+  conceptsHelp: string;
+  forYou: string;
+  continueNext: (concept: string) => string;
+  levels: { just_started: string; getting_there: string; confident: string };
+  moodNames: Record<'calm' | 'happy' | 'tired' | 'bored' | 'stressed' | 'anxious' | 'frustrated' | 'sad', string>;
+  insightsTitle: string;
+  feelingTitle: string;
+  feelingEmpty: string;
+  feelingSummary: (common: string, trend: 'up' | 'down' | 'steady') => string;
+  learningTitle: string;
+  privateNote: string;
+  helpNudge: string;
 };
 
 const en: Strings = {
   greet: (part, name) => `Good ${part}${name ? `, ${name}` : ''}`,
-  nav: { home: 'Home', history: 'History', progress: 'Progress', profile: 'Me' },
+  nav: { home: 'Home', history: 'History', progress: 'Insights', profile: 'Me' },
   streak: (n) => (n === 1 ? '1 day' : `${n} days`),
   streakLabel: 'Streak',
   weekLabel: 'This week',
-  ideasLabel: 'Ideas',
+  ideasLabel: 'Concepts',
   studyTitle: 'Study with me',
   studyBody: 'Pick a topic. I explain it simply, ask gentle questions and help you get it.',
   talkTitle: 'Just talk',
@@ -69,7 +81,7 @@ const en: Strings = {
   quickTopics: 'Quick start',
   continueTitle: 'Pick up where you left off',
   continueCta: 'Continue',
-  ideasOf: (n, total) => `${n} of ${total} ideas`,
+  ideasOf: (n, total) => `${n} of ${total} concepts`,
   moodTitle: 'How are you feeling?',
   moods: [
     { id: 'stressed', label: 'Stressed' },
@@ -91,13 +103,30 @@ const en: Strings = {
   noTopic: 'Open chat',
   studyAgain: 'Study this again',
   sessionNotFound: 'Session not found.',
-  keyIdeas: 'Key ideas',
+  keyIdeas: 'Key concepts',
   status: { understood: 'Got it', partial: 'Almost', gap: 'Still working', unseen: 'Not yet' },
   progressTitle: 'Your learning journey',
   last14: 'Last 14 days',
   sessionsTotal: 'Sessions',
   topicsLearned: 'Topics',
   progressEmpty: 'Your topics will show up here after your first study session.',
+  conceptsHelp: 'Concepts are the key points of a topic. Your buddy checks, gently, which ones you have understood.',
+  forYou: 'For you',
+  continueNext: (c) => `Next up: ${c}`,
+  levels: { just_started: 'Just started', getting_there: 'Getting there', confident: 'Confident' },
+  moodNames: { calm: 'calm', happy: 'happy', tired: 'tired', bored: 'bored', stressed: 'stressed', anxious: 'anxious', frustrated: 'frustrated', sad: 'low' },
+  insightsTitle: 'Insights',
+  feelingTitle: "How you've been feeling",
+  feelingEmpty: 'After a few sessions, your buddy will show how you have been feeling here.',
+  feelingSummary: (common, trend) =>
+    trend === 'up'
+      ? 'Things look brighter for you lately. Nice!'
+      : trend === 'down'
+        ? 'The last few days seem a bit heavier. Talking about it might help.'
+        : `You've mostly seemed ${common} lately.`,
+  learningTitle: 'Learning level',
+  privateNote: "Only you can see this. It's your buddy's gentle read, not a diagnosis.",
+  helpNudge: 'Some days have felt really heavy. You are not alone: talk to someone you trust, or call Tele-MANAS 14416.',
   profileTitle: 'Me',
   language: 'Language',
   voice: "Buddy's voice",
@@ -118,7 +147,7 @@ const te: Strings = {
   streak: (n) => `${n} రోజులు`,
   streakLabel: 'వరుసగా',
   weekLabel: 'ఈ వారం',
-  ideasLabel: 'ఐడియాలు',
+  ideasLabel: 'కాన్సెప్ట్స్',
   studyTitle: 'నాతో చదువు',
   studyBody: 'ఒక టాపిక్ ఎంచుకో. నేను సింపుల్ గా చెప్పి, చిన్న ప్రశ్నలతో అర్థమయ్యేలా చేస్తాను.',
   talkTitle: 'ఊరికే మాట్లాడదాం',
@@ -127,7 +156,7 @@ const te: Strings = {
   quickTopics: 'త్వరగా మొదలుపెట్టు',
   continueTitle: 'ఆపిన చోటు నుంచి కొనసాగిద్దాం',
   continueCta: 'కొనసాగించు',
-  ideasOf: (n, total) => `${total}లో ${n} ఐడియాలు`,
+  ideasOf: (n, total) => `${total}లో ${n} కాన్సెప్ట్స్`,
   moodTitle: 'ఇప్పుడు ఎలా ఉంది?',
   moods: [
     { id: 'stressed', label: 'స్ట్రెస్ గా ఉంది' },
@@ -149,13 +178,30 @@ const te: Strings = {
   noTopic: 'ఓపెన్ చాట్',
   studyAgain: 'మళ్ళీ చదువుదాం',
   sessionNotFound: 'సెషన్ దొరకలేదు.',
-  keyIdeas: 'ముఖ్యమైన ఐడియాలు',
+  keyIdeas: 'ముఖ్యమైన కాన్సెప్ట్స్',
   status: { understood: 'అర్థమైంది', partial: 'దాదాపు', gap: 'ఇంకా ప్రయత్నిస్తున్నాం', unseen: 'ఇంకా లేదు' },
   progressTitle: 'నీ నేర్చుకునే ప్రయాణం',
   last14: 'గత 14 రోజులు',
   sessionsTotal: 'సెషన్లు',
   topicsLearned: 'టాపిక్స్',
   progressEmpty: 'నీ మొదటి స్టడీ సెషన్ తర్వాత నీ టాపిక్స్ ఇక్కడ కనిపిస్తాయి.',
+  conceptsHelp: 'కాన్సెప్ట్స్ అంటే ఒక టాపిక్ లోని ముఖ్యమైన పాయింట్లు. నీకు ఏవి అర్థమయ్యాయో నీ బడ్డీ మెల్లగా చెక్ చేస్తుంది.',
+  forYou: 'నీ కోసం',
+  continueNext: (c) => `తర్వాత: ${c}`,
+  levels: { just_started: 'ఇప్పుడే మొదలుపెట్టాం', getting_there: 'దాదాపు వచ్చేసింది', confident: 'బాగా వచ్చింది' },
+  moodNames: { calm: 'ప్రశాంతంగా', happy: 'హ్యాపీగా', tired: 'అలసటగా', bored: 'బోర్ గా', stressed: 'స్ట్రెస్ గా', anxious: 'కంగారుగా', frustrated: 'చిరాకుగా', sad: 'బాధగా' },
+  insightsTitle: 'ప్రగతి',
+  feelingTitle: 'నువ్వు ఎలా ఉన్నావు',
+  feelingEmpty: 'కొన్ని సెషన్ల తర్వాత, నువ్వు ఎలా ఫీల్ అవుతున్నావో ఇక్కడ కనిపిస్తుంది.',
+  feelingSummary: (common, trend) =>
+    trend === 'up'
+      ? 'ఈ మధ్య నువ్వు బెటర్ గా ఉన్నట్టు అనిపిస్తోంది. సూపర్!'
+      : trend === 'down'
+        ? 'గత కొన్ని రోజులు కొంచెం భారంగా ఉన్నట్టుంది. దాని గురించి మాట్లాడితే హెల్ప్ అవుతుంది.'
+        : `ఈ మధ్య ఎక్కువగా ${common} ఉన్నావు.`,
+  learningTitle: 'నేర్చుకునే స్థాయి',
+  privateNote: 'ఇది నీకు మాత్రమే కనిపిస్తుంది. ఇది నీ బడ్డీ అభిప్రాయం మాత్రమే, డయాగ్నోసిస్ కాదు.',
+  helpNudge: 'కొన్ని రోజులు చాలా భారంగా అనిపించాయి. నువ్వు ఒంటరివి కాదు: నమ్మే వాళ్ళతో మాట్లాడు, లేదా Tele-MANAS 14416 కి కాల్ చేయి.',
   profileTitle: 'నేను',
   language: 'భాష',
   voice: 'బడ్డీ గొంతు',
@@ -176,7 +222,7 @@ const ml: Strings = {
   streak: (n) => `${n} ദിവസം`,
   streakLabel: 'തുടർച്ചയായി',
   weekLabel: 'ഈ ആഴ്ച',
-  ideasLabel: 'ആശയങ്ങൾ',
+  ideasLabel: 'കൺസെപ്റ്റുകൾ',
   studyTitle: 'എന്റെ കൂടെ പഠിക്കാം',
   studyBody: 'ഒരു വിഷയം തിരഞ്ഞെടുക്കൂ. ഞാൻ ലളിതമായി പറഞ്ഞു തന്ന്, ചെറിയ ചോദ്യങ്ങളിലൂടെ മനസ്സിലാക്കി തരാം.',
   talkTitle: 'വെറുതെ സംസാരിക്കാം',
@@ -185,7 +231,7 @@ const ml: Strings = {
   quickTopics: 'വേഗം തുടങ്ങാം',
   continueTitle: 'നിർത്തിയിടത്തു നിന്ന് തുടരാം',
   continueCta: 'തുടരാം',
-  ideasOf: (n, total) => `${total}ൽ ${n} ആശയങ്ങൾ`,
+  ideasOf: (n, total) => `${total}ൽ ${n} കൺസെപ്റ്റുകൾ`,
   moodTitle: 'ഇപ്പോ എങ്ങനെയുണ്ട്?',
   moods: [
     { id: 'stressed', label: 'ടെൻഷനാണ്' },
@@ -207,13 +253,30 @@ const ml: Strings = {
   noTopic: 'തുറന്ന സംസാരം',
   studyAgain: 'വീണ്ടും പഠിക്കാം',
   sessionNotFound: 'സെഷൻ കണ്ടെത്തിയില്ല.',
-  keyIdeas: 'പ്രധാന ആശയങ്ങൾ',
+  keyIdeas: 'പ്രധാന കൺസെപ്റ്റുകൾ',
   status: { understood: 'മനസ്സിലായി', partial: 'ഏതാണ്ട്', gap: 'ഇനിയും ശ്രമിക്കാം', unseen: 'ഇതുവരെ ഇല്ല' },
   progressTitle: 'നിന്റെ പഠന യാത്ര',
   last14: 'കഴിഞ്ഞ 14 ദിവസം',
   sessionsTotal: 'സെഷനുകൾ',
   topicsLearned: 'വിഷയങ്ങൾ',
   progressEmpty: 'ആദ്യത്തെ പഠന സെഷനു ശേഷം നിന്റെ വിഷയങ്ങൾ ഇവിടെ കാണാം.',
+  conceptsHelp: 'കൺസെപ്റ്റുകൾ എന്നാൽ ഒരു വിഷയത്തിലെ പ്രധാന കാര്യങ്ങൾ. ഏതൊക്കെ നിനക്ക് മനസ്സിലായെന്ന് കൂട്ടുകാരൻ പതുക്കെ നോക്കും.',
+  forYou: 'നിനക്കായി',
+  continueNext: (c) => `അടുത്തത്: ${c}`,
+  levels: { just_started: 'തുടങ്ങിയതേയുള്ളൂ', getting_there: 'ഏതാണ്ട് ആയി', confident: 'നന്നായി അറിയാം' },
+  moodNames: { calm: 'ശാന്തമായി', happy: 'സന്തോഷത്തോടെ', tired: 'ക്ഷീണിതനായി', bored: 'ബോറടിച്ച്', stressed: 'ടെൻഷനോടെ', anxious: 'പേടിയോടെ', frustrated: 'ദേഷ്യത്തോടെ', sad: 'വിഷമത്തോടെ' },
+  insightsTitle: 'പുരോഗതി',
+  feelingTitle: 'നീ എങ്ങനെയുണ്ടായിരുന്നു',
+  feelingEmpty: 'കുറച്ച് സെഷനുകൾക്ക് ശേഷം, നിനക്ക് എങ്ങനെ തോന്നുന്നുവെന്ന് ഇവിടെ കാണാം.',
+  feelingSummary: (common, trend) =>
+    trend === 'up'
+      ? 'ഈയിടെ നിനക്ക് കുറച്ചുകൂടി നല്ലതായി തോന്നുന്നു. അടിപൊളി!'
+      : trend === 'down'
+        ? 'കഴിഞ്ഞ കുറച്ച് ദിവസങ്ങൾ കുറച്ച് ഭാരമുള്ളതായി തോന്നുന്നു. അതേക്കുറിച്ച് സംസാരിച്ചാൽ ആശ്വാസമാകും.'
+        : `ഈയിടെ കൂടുതലും ${common} ആയിരുന്നു.`,
+  learningTitle: 'പഠന നില',
+  privateNote: 'ഇത് നിനക്ക് മാത്രമേ കാണാനാകൂ. ഇത് കൂട്ടുകാരന്റെ ഒരു തോന്നൽ മാത്രം, രോഗനിർണയമല്ല.',
+  helpNudge: 'ചില ദിവസങ്ങൾ വല്ലാതെ ഭാരമുള്ളതായി തോന്നി. നീ ഒറ്റയ്ക്കല്ല: വിശ്വസിക്കുന്ന ആരോടെങ്കിലും സംസാരിക്കൂ, അല്ലെങ്കിൽ Tele-MANAS 14416 ൽ വിളിക്കൂ.',
   profileTitle: 'ഞാൻ',
   language: 'ഭാഷ',
   voice: 'കൂട്ടുകാരന്റെ ശബ്ദം',

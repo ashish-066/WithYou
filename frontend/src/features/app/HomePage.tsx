@@ -8,7 +8,7 @@ import { ArrowRight, BookOpen, CalendarCheck, Flame, Lightbulb, MessageCircleHea
 
 import { useAuth } from '@/hooks/useAuth';
 import { cx } from '@/ui/cx';
-import { useSessions, useStats } from './data';
+import { useSessions, useStats, useSuggestions } from './data';
 import { usePrefs } from './prefs';
 import { TOPIC_SUGGESTIONS, partOfDay, strings } from './strings';
 
@@ -26,7 +26,26 @@ export function HomePage() {
   const stats = useStats();
   const sessions = useSessions();
   const firstName = (user?.name || '').split(' ')[0];
+  const suggestions = useSuggestions();
   const lastStudy = sessions.data?.sessions.find((s) => s.mode === 'study' && s.topic);
+  // Pick up where you left off: the newest unfinished topic (already in this language)
+  const open = suggestions.data?.continue[0];
+  const resume = open
+    ? {
+        topic: open.topic,
+        understood: open.ideas_understood,
+        total: open.ideas_total,
+        note: open.next_concept ? t.continueNext(open.next_concept) : null,
+      }
+    : lastStudy
+      ? { topic: lastStudy.topic!, understood: lastStudy.ideas_understood, total: lastStudy.ideas_total, note: lastStudy.next_time }
+      : null;
+  // For you: other unfinished topics + topics the buddy suggested next; defaults for new learners
+  const personal = [
+    ...(suggestions.data?.continue.slice(1).map((c) => c.topic) ?? []),
+    ...(suggestions.data?.next_topics ?? []),
+  ].filter((v, i, a) => v && a.indexOf(v) === i);
+  const quick = personal.length ? personal.slice(0, 8) : TOPIC_SUGGESTIONS[language];
 
   return (
     <div className="space-y-7">
@@ -83,32 +102,29 @@ export function HomePage() {
       </section>
 
       {/* Pick up where you left off */}
-      {lastStudy && (
+      {resume && (
         <section aria-labelledby="continue-title" className="rounded-ui border border-line bg-surface p-5">
           <h2 id="continue-title" className="text-meta text-muted">
             {t.continueTitle}
           </h2>
-          <p className="mt-1 font-display text-h3">{lastStudy.topic}</p>
-          {lastStudy.ideas_total > 0 && (
+          <p className="mt-1 font-display text-h3">{resume.topic}</p>
+          {resume.total > 0 && (
             <>
               <div
                 className="mt-3 h-2 overflow-hidden rounded-full bg-sunken"
                 role="progressbar"
                 aria-valuemin={0}
-                aria-valuemax={lastStudy.ideas_total}
-                aria-valuenow={lastStudy.ideas_understood}
+                aria-valuemax={resume.total}
+                aria-valuenow={resume.understood}
               >
-                <div
-                  className="h-full rounded-full bg-accent"
-                  style={{ width: `${(100 * lastStudy.ideas_understood) / lastStudy.ideas_total}%` }}
-                />
+                <div className="h-full rounded-full bg-accent" style={{ width: `${(100 * resume.understood) / resume.total}%` }} />
               </div>
-              <p className="mt-1.5 text-meta text-muted">{t.ideasOf(lastStudy.ideas_understood, lastStudy.ideas_total)}</p>
+              <p className="mt-1.5 text-meta text-muted">{t.ideasOf(resume.understood, resume.total)}</p>
             </>
           )}
-          {lastStudy.next_time && <p className="mt-3 text-body text-ink">{lastStudy.next_time}</p>}
+          {resume.note && <p className="mt-3 text-body text-ink">{resume.note}</p>}
           <button
-            onClick={() => navigate(sessionUrl('study', lastStudy.topic ?? undefined))}
+            onClick={() => navigate(sessionUrl('study', resume.topic))}
             className="mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-body text-canvas"
           >
             {t.continueCta}
@@ -120,10 +136,10 @@ export function HomePage() {
       {/* Quick topics */}
       <section aria-labelledby="quick-title">
         <h2 id="quick-title" className="text-meta text-muted">
-          {t.quickTopics}
+          {personal.length ? t.forYou : t.quickTopics}
         </h2>
         <ul className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1">
-          {TOPIC_SUGGESTIONS[language].map((topic) => (
+          {quick.map((topic) => (
             <li key={topic} className="shrink-0">
               <button
                 onClick={() => navigate(sessionUrl('study', topic))}

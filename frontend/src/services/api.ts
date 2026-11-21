@@ -110,6 +110,21 @@ export interface SessionSummary {
   next_time: string | null;
   ideas_total: number;
   ideas_understood: number;
+  level: Level | null;
+  mood: Mood | null;
+  self_mood: string | null;
+}
+
+export type Level = 'just_started' | 'getting_there' | 'confident';
+export type MoodLabel = 'calm' | 'happy' | 'tired' | 'bored' | 'stressed' | 'anxious' | 'frustrated' | 'sad';
+export interface Mood {
+  level: number;
+  label: MoodLabel;
+}
+
+export interface Suggestions {
+  continue: { topic: string; level: Level | null; next_concept: string | null; ideas_understood: number; ideas_total: number }[];
+  next_topics: string[];
 }
 
 export interface SessionDetail extends SessionSummary {
@@ -122,8 +137,17 @@ export interface Stats {
   sessions_total: number;
   sessions_this_week: number;
   ideas_understood: number;
-  topics: { topic: string; sessions: number; ideas_understood: number; ideas_total: number; last: string | null }[];
-  last_14_days: { day: string; active: boolean }[];
+  topics: {
+    topic: string;
+    sessions: number;
+    ideas_understood: number;
+    ideas_total: number;
+    last: string | null;
+    level: Level | null;
+  }[];
+  last_14_days: { day: string; active: boolean; mood_level: number | null; mood_label: MoodLabel | null }[];
+  mood: { average: number; trend: 'up' | 'down' | 'steady'; common_label: MoodLabel | null; days_with_mood: number } | null;
+  crisis_recent: boolean;
 }
 
 async function getJson<T>(path: string): Promise<T> {
@@ -136,9 +160,12 @@ async function getJson<T>(path: string): Promise<T> {
   return response.json();
 }
 
-export const getMySessions = () => getJson<{ sessions: SessionSummary[] }>('/me/sessions');
-export const getMySession = (id: string) => getJson<SessionDetail>(`/me/sessions/${encodeURIComponent(id)}`);
-export const getMyStats = () => getJson<Stats>('/me/stats');
+// `lang`: saved text comes back in this language (translated if needed)
+export const getMySessions = (lang: string) => getJson<{ sessions: SessionSummary[] }>(`/me/sessions?lang=${lang}`);
+export const getMySession = (id: string, lang: string) =>
+  getJson<SessionDetail>(`/me/sessions/${encodeURIComponent(id)}?lang=${lang}`);
+export const getMyStats = (lang: string) => getJson<Stats>(`/me/stats?lang=${lang}`);
+export const getMySuggestions = (lang: string) => getJson<Suggestions>(`/me/suggestions?lang=${lang}`);
 
 /**
  * Health check for the API.
