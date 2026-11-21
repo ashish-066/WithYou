@@ -12,7 +12,22 @@ import {
   VideoTrack,
   useTracks,
 } from '@livekit/components-react';
-import { Track } from 'livekit-client';
+import { Track, type AudioCaptureOptions } from 'livekit-client';
+
+/**
+ * Mic clean-up in the browser, before audio leaves the device (the voice agent
+ * also runs LiveKit's background-voice cancellation on the server):
+ * - voiceIsolation: the browser/OS voice-focus mode, keeps the nearest speaker
+ *   (Chrome and Safari where supported; ignored elsewhere)
+ * - noiseSuppression / echoCancellation: steady noise, and the buddy's own voice
+ *   coming back from the speakers
+ */
+const MIC_OPTIONS: AudioCaptureOptions = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+  voiceIsolation: true,
+};
 
 interface InterviewRoomProps {
   serverUrl: string;
@@ -32,7 +47,7 @@ export function InterviewRoom({ serverUrl, token, onDisconnect, onEnd }: Intervi
       serverUrl={serverUrl}
       token={token}
       connect={true}
-      audio={true}
+      audio={MIC_OPTIONS}
       video={false}
       onDisconnected={handleDisconnected}
       className="h-screen w-screen bg-black overflow-hidden"

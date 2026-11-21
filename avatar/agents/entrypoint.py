@@ -62,8 +62,9 @@ TURN_HANDLING = {
         # Presence's audio is paused as soon as candidate speech is detected. Requiring
         # transcribed words stops coughs, keyboard noise and echo from cutting
         # Presence off mid-sentence (the "voice breaking").
-        "min_duration": 0.8,
-        "min_words": 2,
+        # Raise these in a noisy room (INTERRUPT_MIN_DURATION / INTERRUPT_MIN_WORDS)
+        "min_duration": settings.interrupt_min_duration,
+        "min_words": settings.interrupt_min_words,
         "resume_false_interruption": True,
         "false_interruption_timeout": 1.0,
     },

@@ -122,3 +122,15 @@ Ashish doesn't speak Malayalam and wants Telugu too (so he can judge quality him
 - **Tests:** new `avatar/tests/test_language.py` (5): script → language, code normalisation, greeting/nudge per language, turns carry the language, voice switches only on change. **avatar 53 passed, worker 90 passed**, frontend builds.
 - **Real agent test** (isolated dispatch name `padippu-test`; Ashish's agent was also registered): job received → Bey 402 → voice-only → Sarvam TTS WebSocket connected (bulbul:v3/kavya) → Malayalam greeting synthesized → realtime STT `session.begin` (saaras:v3-realtime). **0 errors.**
 - **[ASK ASHISH] pending:** the big voice test, in Telugu (and Malayalam), plus a language switch mid-session.
+
+## Phase 2 manual test, round 1: "voice breaks / pauses" (2026-11-22)
+Ashish: it works, but the voice breaks. Diagnosis from the session transcript in Redis:
+1. **Not TTS speed.** Measured Bulbul v3 streaming for a 4-sentence Telugu reply: first audio 0.58 s, 25.6 s of audio generated in 5.3 s, **0 playback stalls**.
+2. **Ghost turns from people talking nearby** (Ashish confirmed): two Kannada sentences, "3.5 mm 400. C pin port", "Oxfin", and fragments 2–5 s apart. Each one became a learner turn and cut the buddy off mid-sentence. That's the breaking.
+3. **Mojibake bug:** one reply was stored and spoken as `à°à°…`. The conversation parser's fallback decoded with `unicode_escape` (UTF-8 read as Latin-1); it never showed in English. **Fixed** (`338aebf`): lenient JSON extraction (fences, surrounding text, raw newlines) plus proper JSON unescaping; regression tests added.
+
+**Noise (Ashish chose noise cancellation; option 2 only if that's not enough):**
+- **Server:** LiveKit **BVC** (background voice cancellation) is already applied to the learner's audio before VAD/STT (checked: the legacy `RoomInputOptions` still maps to it in agents 1.8). It removes quieter background voices; loud nearby talk can still leak.
+- **Browser (new):** the mic is captured with `voiceIsolation` (OS/browser voice focus, Chrome/Safari where supported), `noiseSuppression`, `echoCancellation`, `autoGainControl`.
+- **Option 2, ready but not enabled:** `INTERRUPT_MIN_DURATION` / `INTERRUPT_MIN_WORDS` in `avatar/.env` (default 0.8 s / 2 words; for a noisy hall try 1.2 / 3).
+- **Recommendation for the demo:** a headset mic (closest voice wins) is the single biggest help against hall chatter.
