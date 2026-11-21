@@ -345,3 +345,12 @@ Next:
 ## Feature: your garden (Insights)
 - The learning-level bars are replaced by a garden (`features/app/Garden.tsx`): one plant per topic, one leaf per concept (green once understood, an outline while growing), a taller stem as the level rises, and a flower when the whole topic is understood. Tap a plant to study that topic again. Text in ml/te/en.
 - Fix found in the screenshots: Sarvam Translate sometimes returns chatter ("The translation of the input text…") for short topic names. `looks_broken()` now keeps the original text and doesn't cache the bad result; the bad cache entry was deleted. Tests: API 71.
+
+## Deployed (2026-11-22)
+- **Live at https://13.205.190.12.sslip.io** (Let's Encrypt HTTPS via Caddy; sslip.io gives a free name for the IP).
+- AWS account profile `alex`, region ap-south-1, kept apart from the interview platform's `alex-staging-*` servers and VPC: instance `i-0611864ba60c5c91a` (t3.medium, Ubuntu 24.04, 30 GB), security group `sg-08444f2c795ae8ce7` (80/443 open, SSH only from the owner's IP), Elastic IP `eipalloc-0eb599900b9982454`, key pair `study-buddy` (`~/.ssh/study_buddy`). Everything is tagged `project=study-buddy`. About $1–1.5 a day.
+- One server runs everything in Docker: Postgres, Redis, migrations, API, voice agent, brain worker, frontend (nginx), Caddy. Files: `deploy/buddy/`. Redeploy after a commit: `deploy/buddy/deploy.sh 13.205.190.12`. Secrets go over SSH from `avatar/.env` and `worker/.env`; the server's own `.env` holds generated DB/Redis passwords and AUTH_SECRET. Sign-up is on.
+- Fixes for production: nginx upload limit 1 MB → 10 MB (page photos), camera allowed for the app itself, avatar image no longer copies the removed DSA module, and the agent image tolerates the LiveKit download tool crashing on exit when the model files are present.
+- The demo learner was copied (only their organisation, user and 8 sessions). Checked: all 7 services healthy, the agent registered with LiveKit (India South), login works, the photo feature works on the live site.
+- **The laptop's agent must not run at the same time** (same LiveKit project and agent name: LiveKit could give a call to the laptop).
+- Teardown: terminate `i-0611864ba60c5c91a`, release `eipalloc-0eb599900b9982454`, then delete `sg-08444f2c795ae8ce7` and key pair `study-buddy`.
