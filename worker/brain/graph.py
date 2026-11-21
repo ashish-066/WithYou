@@ -14,6 +14,7 @@ The input_processor now uses hybrid routing:
 2. LLM router (Gemini Flash) for ambiguous cases
 """
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Any, Literal
@@ -128,16 +129,24 @@ async def conclude_interview_node(state: InterviewState) -> dict[str, Any]:
     }
 
 
-async def scoring_process_node(state: InterviewState) -> dict[str, Any]:
-    """Process Q&A exchange for skill tree scoring.
+UNDERSTANDING_TIMEOUT_S = 8.0
 
-    This node extracts evidence from the latest exchange and updates
-    the skill tree. Only runs if skill tree is initialized.
+
+async def scoring_process_node(state: InterviewState) -> dict[str, Any]:
+    """After the reply was spoken: update what the learner understands.
+
+    (The old skill-tree scoring still runs if a tree was set up, which no
+    longer happens for study sessions.)
     """
+    try:
+        # Bounded: the session lock is held meanwhile, and the next turn waits on it
+        updates = await asyncio.wait_for(update_understanding(state), timeout=UNDERSTANDING_TIMEOUT_S)
+    except Exception as e:
+        logger.error(f"[UNDERSTANDING] update skipped: {type(e).__name__}: {e}")
+        updates = {}
     skill_tree_state = state.get("skill_tree")
     if not skill_tree_state or not skill_tree_state.get("tree_initialized"):
-        # Skill tree not initialized, skip scoring
-        return {}
+        return updates
 
     # System inputs ([NO ANSWER], [CANDIDATE RETURNED], ...) are not answers to score
     if str(state.get("current_input") or "").startswith("["):
@@ -148,6 +157,63 @@ async def scoring_process_node(state: InterviewState) -> dict[str, Any]:
     except Exception as e:
         logger.error(f"[SCORING] Error in scoring process node: {e}")
         return {}
+
+
+async def update_understanding(state: InterviewState) -> dict[str, Any]:
+    """The gentle evaluator's bookkeeping, after the reply (brain/understanding.py).
+
+    - a new topic was explained: list its key ideas (the understanding map)
+    - the learner answered a check: assess the answer against the open ideas
+    - the buddy asked a check question: remember which idea it was about
+    """
+    from brain import understanding as u_mod
+
+    if str(state.get("current_input") or "").startswith("["):
+        return {}
+    u = dict(state.get("understanding") or {})
+    topic = str(state.get("current_topic") or "")
+    language = str(state.get("language") or "en-IN")
+    classification = state.get("input_classification")
+
+    # A topic we have no map for yet (explained, or the learner asked to be quizzed)
+    if (
+        classification in ("explain_request", "quiz_request")
+        and topic
+        and topic != "not chosen yet"
+        and topic.lower() != str(u.get("topic") or "").lower()
+    ):
+        points = await u_mod.plan_points(topic, language)
+        if points:
+            u = u_mod.new_map(topic, language, points)
+            logger.info(f"[UNDERSTANDING] {topic}: {len(points)} key ideas")
+
+    # The learner answered the buddy's question about an idea
+    if state.get("answering_check") and u.get("points"):
+        messages = state.get("messages") or []
+        asked = next((m.get("content", "") for m in reversed(messages[:-2]) if m.get("role") == "assistant"), "")
+        results = await u_mod.assess(asked, str(state.get("current_input") or ""), u["points"])
+        u = u_mod.apply_assessment(u, results)
+        logger.info(f"[UNDERSTANDING] assessed: {results}")
+
+    # The buddy asked a check question this turn (a quiz, or a follow-up/coaching
+    # question about an idea still open)
+    target = state.get("check_target") or ""
+    if not target and classification == "quiz_request":
+        first = u_mod.next_point({**state, "understanding": u})
+        target = first["id"] if first else ""
+    if target and (classification == "quiz_request" or state.get("answering_check")):
+        open_ids = {p["id"] for p in u.get("points") or [] if p["status"] != "understood"}
+        if u.get("awaiting") in open_ids:
+            u = u_mod.asked_about(u, u["awaiting"])  # still on the same idea
+        elif target in open_ids:
+            u = u_mod.asked_about(u, target)
+        elif "?" in str(state.get("response") or ""):
+            # They got it, and the buddy moved on with a question about the next idea
+            nxt = u_mod.next_point({**state, "understanding": u})
+            if nxt:
+                u = u_mod.asked_about(u, nxt["id"])
+
+    return {"understanding": u} if u != (state.get("understanding") or {}) else {}
 
 
 async def scoring_finalize_and_compare_node(state: InterviewState) -> dict[str, Any]:

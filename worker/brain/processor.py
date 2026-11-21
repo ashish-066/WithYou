@@ -11,7 +11,8 @@ from typing import Any
 
 from redis.asyncio import Redis
 
-from brain import interview_flow
+from brain import interview_flow, understanding
+from brain.brains.router import run_prefilter
 from brain.graph import create_interview_graph
 from brain.language_switch import requested_language
 from brain.services.reply_publisher import (
@@ -201,6 +202,21 @@ class MessageProcessor:
             elif message.message_type == "candidate_returned":
                 decision = interview_flow.on_returned(state)
                 content = "[CANDIDATE RETURNED]"
+            # Gentle evaluator (brain/understanding.py): is this an answer to the
+            # buddy's check question, and does a vague one get a follow-up?
+            state["answering_check"] = False
+            state["check_target"] = ""
+            if message.message_type == "candidate_response" and not (decision and decision.instruction):
+                intent = run_prefilter({**state, "current_input": message.content})
+                if understanding.answering_a_check(state) and understanding.is_answer(
+                    intent.classification, intent.confidence
+                ):
+                    state["answering_check"] = True
+                    state["understanding"], follow_up = understanding.before_reply(state, message.content)
+                    if decision is not None and follow_up:
+                        decision.instruction = follow_up
+                target = understanding.next_point(state)
+                state["check_target"] = target["id"] if target else ""
             if decision is not None:
                 state["flow"] = decision.flow
                 state["interviewer_instruction"] = decision.instruction

@@ -243,11 +243,12 @@ class ContextManager:
             "dfa",
             "skill_tree",
             "flow",
+            "understanding",
             "candidate_urls",
         }
         int_fields = {"turn_count", "max_turns", "report_attempts"}
         float_fields = {"trust_score"}
-        bool_fields = {"interview_ended"}
+        bool_fields = {"interview_ended", "answering_check"}
 
         for key, value in data.items():
             # Handle bytes from Redis

@@ -301,6 +301,12 @@ class InterviewState(TypedDict, total=False):
     current_topic: str
     # Language the buddy speaks now: ml-IN | te-IN | en-IN (follows the learner)
     language: str
+    # Understanding map of the current topic (brain/understanding.py)
+    understanding: dict[str, Any]
+    # This turn answers the buddy's check question (coach it, assess it after the reply)
+    answering_check: bool
+    # The idea the buddy is asked to check this turn (point id), if any
+    check_target: str
     topics_covered: list[str]
     turn_count: int
     max_turns: int  # Configurable interview length

@@ -154,3 +154,24 @@ Ashish: it works, but the voice breaks. Diagnosis from the session transcript in
 - **Real brain:** the exact misheard Kannada turn in a Telugu session → reply in Telugu (317 Telugu chars, 0 Kannada); "ఇప్పుడు మలయాళంలో చెప్పు" → reply in Malayalam.
 - **Tests:** worker **103 passed** (+9: switch requests incl. not-a-request and ambiguous cases, processor switches before the reply), avatar **56 passed** (+2: Kannada → current voice, listening follows the buddy, buttons switch both).
 - **Phase 2 accepted by Ashish (2026-11-22)** ("let's put it like this and move to the next phase"): Malayalam/Telugu voice conversation works end to end; tuning can continue later. **Phase 2 exit checkpoint met.**
+
+## Phase 3: The gentle evaluator loop ✅ (automated); voice test batched with later phases
+Ashish is away and asked me to keep going phase by phase and test everything together at the end.
+
+**New `worker/brain/understanding.py`, the understanding map in `state["understanding"]`:** the topic's 3–4 key ideas (in the session language), each `unseen | partial | gap | understood`, with the learner's own words as evidence, plus attempts and a `struggled` flag (for Phase 5's call-backs).
+- **Reused from the interview platform:**
+  - `EvidenceExtractor.extract_single` (Yes/No/Insufficient + exact quote + confidence) with `filter_confirmed_extractions` (≥ 0.7). We also require the quote to actually appear in the learner's answer (no invented evidence).
+  - `QuestionSelector.calculate_skill_priorities` (weight × remaining × recency) picks the next idea: missed > half-shown > untouched, not one just asked.
+  - The old verification probe's *mechanism*: a one-turn instruction decided before the reply. A vague answer to the buddy's question gets **exactly one** short, encouraging follow-up; a second vague answer gets the idea explained kindly. No timing flags, no judgment.
+- **Before the reply** (processor): is this turn an answer to the buddy's question? Clear requests (quiz, bye, summary, strong "explain/what is") take over. **Hesitant answers ending in "?" still count as answers**: "maybe the sun?" was routing as a question. Answers are coached: new **`coach`** mode is encouragement → gap → hint, never "wrong" or a score. `<what_to_check_next>` = the selected idea.
+- **After the reply** (graph `scoring_process` node, bounded to 8 s, since the lock is held): list ideas for a new topic, assess an answer against the open ideas, and record which idea the buddy just asked about (including moving on to the next idea after a correct answer).
+- **Fixed during the real-brain run:** the scoring client (gemini-3.5-flash) took 17–21 s or timed out (504) for idea listing and assessment. These now use the fast pool (Sarvam-105B first, Gemini fallback): **0.4–2.1 s per whole turn**.
+- **Registered** `understanding` (JSON) and `answering_check` (bool) in the state manager, otherwise they'd come back from Redis as strings.
+- **Tests:** new `worker/tests/test_understanding.py` (9):
+  - nails A, misses B → B is targeted next; understood ideas are never re-asked
+  - evidence must be the learner's own words; low-confidence Yes isn't counted
+  - vague answer → exactly one follow-up (English/Telugu/Malayalam hedges)
+  - coaching order and no grading; "maybe?" is coached as an answer
+  - processor round trip through Redis
+  - **Worker 112 passed.**
+- **Real-brain loops (English and Telugu):** teach → quiz → half-right ("You're close!… green helper…" / "…కరెక్ట్! కానీ…") → vague (one follow-up / "కంగారు పడకు") → correct (marked understood with the learner's quote → moves on to the next idea).

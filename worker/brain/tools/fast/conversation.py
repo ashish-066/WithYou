@@ -7,11 +7,11 @@ fast model so it can be published before any understanding-tracking runs.
 import logging
 from datetime import datetime, timezone
 
+from brain import understanding
 from brain.models.llm_pool import get_llm_pool
 from brain.models.schemas import ConversationInput, ConversationResponse, FilteredToolOutput
 from brain.state import InterviewState, Message
 from core.config import settings
-from scoring import get_suggested_question
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,10 @@ Mode for this turn: {mode}
   or two sentences, give one everyday example, then offer to go deeper or to check
   understanding with a quick question. Don't lecture: at most 4 short sentences.
 - check: ask exactly ONE clear, friendly question about the current topic (or the thing they
-  just learned). No answer options, no grading words.
+  just learned), about the idea in <what_to_check_next> if there is one. No answer options,
+  no grading words.
+- coach: {coach_rules} If they got it, celebrate and then gently ask about the idea in
+  <what_to_check_next> (if any) or offer to go on.
 If the learner is answering a question you asked, respond to their actual answer: say what
 they got right first, then the gap (if any) with a small hint. Never say "wrong" or give a score.
 
@@ -95,6 +98,7 @@ Respond in JSON format:
 
 # Router intent -> what the buddy does this turn
 MODES = {"explain_request": "explain", "quiz_request": "check"}
+COACH_RULES = understanding.COACH_RULES
 
 _NATIVE_STYLE = (
     "Use simple, everyday spoken {name} in {name} script, the way a friend talks, not textbook "
@@ -123,7 +127,12 @@ def language_rule(state: InterviewState) -> str:
 
 
 def turn_mode(state: InterviewState) -> str:
-    """chat | explain | check, from the router's classification of this turn."""
+    """chat | explain | check | coach, from the router's classification of this turn.
+
+    An answer to the buddy's own check question is coached (brain/understanding.py).
+    """
+    if state.get("answering_check"):
+        return "coach"  # decided before the graph: it's an answer to our question
     return MODES.get(str(state.get("input_classification") or ""), "chat")
 
 
@@ -163,12 +172,8 @@ async def conversation_tool(
         recent_messages = _format_recent_messages(state.get("messages", []))
 
         # Get skill-based question suggestion
-        skill_suggestion = get_suggested_question(state)
-        skill_guidance = (
-            f"If it fits naturally, gently check: {skill_suggestion}"
-            if skill_suggestion
-            else "Nothing specific yet."
-        )
+        target = understanding.point_text(state, state.get("check_target")) or understanding.check_guidance(state)
+        skill_guidance = target or "Nothing specific yet."
 
         # Build prompt
         prompt = CONVERSATION_PROMPT.format(
@@ -181,6 +186,7 @@ async def conversation_tool(
             user_message=input_data.user_message,
             interviewer_instruction=state.get("interviewer_instruction") or "None",
             mode=turn_mode(state),
+            coach_rules=COACH_RULES,
             language_rule=language_rule(state),
         )
 
