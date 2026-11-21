@@ -223,3 +223,14 @@ Ashish is away and asked me to keep going phase by phase and test everything tog
 - **New LiveKit project** `aa-v5cciyrx` (key updated by Ashish in `avatar/.env`): REST auth and room join verified.
 - **Phone access** via Cloudflare quick tunnel (`cloudflared tunnel --url http://localhost:3000`): page and API checked through the tunnel.
 - **Ashish:** "working, checked in Telugu, we are rocking". The full session on the phone works end to end. **Phases 3–5 exit checkpoints met** (pending only the stage rehearsal items in `context/DEMO.md`).
+
+## Humanish pass (2026-11-22), after Ashish's phone screenshot
+Ashish: "the UI looks good but it doesn't give the same humanish feeling". Two causes in the screenshot:
+1. **It looked like a chat app** (small round face + chat bubbles). **Now, with the avatar on, the room is a video call:** the face fills the screen, the current line shows as a subtitle (buddy, or the learner while talking), and topic / covered chips / controls float on translucent bars. The voice-only look (orb + chat) is unchanged. Verified with the real avatar (BeyondPresence, new key) at 390×844.
+2. **The reply was robotic:** the filler "అంటే" was sent as a turn, and the buddy *defined the word* in formal "మీరు". Prompt changes:
+   - fillers and fragments get a short "go on" ("హా, చెప్పు…"), never an explanation
+   - always the informal you (నువ్వు / നീ)
+   - 1–3 short sentences; react like a person first; vary openings; no comments on how they feel unless they raise it
+   - Real brain: "అంటే" → "హా, చెప్పు… నీకు ఏది కావాలంటే అది మొదలుపెట్టు."; "బోర్ గా ఉంది" → "అరె, బోర్ కొట్టడం సహజమేనే…"; gravity → "ఓహ్, గ్రావిటీ అంటే చాలా సింపుల్!…"
+- **End-of-turn patience:** LiveKit's end-of-turn model doesn't know Telugu/Malayalam, so a pause alone ends the turn. Wait 0.9 s instead of 0.5 s (`ENDPOINTING_MIN_DELAY`), so a thinking pause isn't sent as its own turn.
+- Tests: worker 114, avatar 58; frontend builds.

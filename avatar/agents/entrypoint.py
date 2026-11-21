@@ -57,7 +57,9 @@ logger = logging.getLogger(__name__)
 # the candidate is done, waiting min_delay after a complete thought and up to
 # max_delay after an unfinished one — replaces a fixed 1.5s silence timer.
 TURN_HANDLING = {
-    "endpointing": {"min_delay": 0.5, "max_delay": 3.0},
+    # LiveKit's end-of-turn model doesn't know Telugu/Malayalam, so a pause alone ends
+    # the turn: wait a little longer so a thinking pause ("అంటే...") isn't sent alone
+    "endpointing": {"min_delay": settings.endpointing_min_delay, "max_delay": 3.0},
     "interruption": {
         # Off by default: on laptop speakers the buddy heard its own voice, cut
         # itself off and answered its own echo in a loop. While it speaks, the mic

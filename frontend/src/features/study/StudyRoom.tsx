@@ -1,9 +1,9 @@
 /**
- * The learner's one screen during a session, mobile first:
- *   top     topic + "what we've covered" (the key ideas from the brain's map)
- *   middle  the buddy: avatar video when there is one, otherwise a state orb
- *           (listening / thinking / speaking), and the live transcript
- *   bottom  language switch, a big mic button, end
+ * The learner's one screen during a session, mobile first. Two looks:
+ *   - with the avatar: a video call. The buddy's face fills the screen, its
+ *     words appear as subtitles, and topic / covered ideas / controls float on top.
+ *   - voice-only: topic + covered ideas, a state orb (listening / thinking /
+ *     speaking) and the live transcript as a chat.
  * Audio only from the learner (no camera). The Start tap that opened this room
  * is the user gesture browsers need to play sound; StartAudio covers the rest.
  */
@@ -79,31 +79,21 @@ function Session({ callId, startLanguage, onEnd }: { callId: string; startLangua
     if (spoken && LANGUAGES.some((l) => l.code === spoken)) setLanguage(spoken);
   }, [progress?.language]);
 
-  return (
+  const avatar = useAvatarTrack();
+  const endButton = (onVideo: boolean) => (
+    <button
+      onClick={() => setConfirmEnd(true)}
+      className={cx(
+        'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-body',
+        onVideo ? 'bg-ink/55 text-canvas' : 'border border-line-strong text-ink',
+      )}
+    >
+      <PhoneOff size={16} aria-hidden />
+      {t.end}
+    </button>
+  );
+  const overlays = (
     <>
-      <header className="flex items-start justify-between gap-3 px-4 pb-2 pt-[max(12px,env(safe-area-inset-top))]">
-        <div className="min-w-0">
-          <p className="text-meta text-muted">{t.topic}</p>
-          <p className="truncate font-display text-h3">{progress?.topic || t.noTopic}</p>
-        </div>
-        <button
-          onClick={() => setConfirmEnd(true)}
-          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-line-strong px-4 text-body text-ink"
-        >
-          <PhoneOff size={16} aria-hidden />
-          {t.end}
-        </button>
-      </header>
-
-      <Covered progress={progress} language={language} />
-
-      <main className="flex min-h-0 flex-1 flex-col items-center px-4">
-        <Buddy language={language} />
-        <Transcript language={language} />
-      </main>
-
-      <Controls language={language} onLanguage={setLanguage} />
-
       <StartAudio
         label={t.tapForSound}
         className="fixed inset-x-4 bottom-28 z-20 rounded-full bg-accent px-5 py-3 text-lead text-accent-on"
@@ -119,6 +109,55 @@ function Session({ callId, startLanguage, onEnd }: { callId: string; startLangua
           }}
         />
       )}
+    </>
+  );
+
+  if (avatar) {
+    // Video call: the face fills the screen, words as subtitles
+    return (
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-ink">
+        <VideoTrack trackRef={avatar} className="absolute inset-0 h-full w-full object-cover" />
+        <header className="relative z-10 flex items-start justify-between gap-3 px-4 pb-2 pt-[max(12px,env(safe-area-inset-top))]">
+          <div className="min-w-0 rounded-ui bg-ink/55 px-3 py-1.5 text-canvas">
+            <p className="text-meta opacity-80">{t.topic}</p>
+            <p className="truncate font-display text-lead">{progress?.topic || t.noTopic}</p>
+          </div>
+          {endButton(true)}
+        </header>
+        <div className="relative z-10">
+          <Covered progress={progress} language={language} onVideo />
+        </div>
+        <div className="flex-1" />
+        <div className="relative z-10 px-4 pb-3">
+          <Captions language={language} />
+        </div>
+        <div className="relative z-10">
+          <Controls language={language} onLanguage={setLanguage} onVideo />
+        </div>
+        {overlays}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <header className="flex items-start justify-between gap-3 px-4 pb-2 pt-[max(12px,env(safe-area-inset-top))]">
+        <div className="min-w-0">
+          <p className="text-meta text-muted">{t.topic}</p>
+          <p className="truncate font-display text-h3">{progress?.topic || t.noTopic}</p>
+        </div>
+        {endButton(false)}
+      </header>
+
+      <Covered progress={progress} language={language} />
+
+      <main className="flex min-h-0 flex-1 flex-col items-center px-4">
+        <Buddy language={language} />
+        <Transcript language={language} />
+      </main>
+
+      <Controls language={language} onLanguage={setLanguage} />
+      {overlays}
     </>
   );
 }
@@ -143,13 +182,23 @@ function useProgress(callId: string): Progress | null {
 }
 
 /** "What we've covered": one chip per key idea; understood ones are filled. */
-function Covered({ progress, language }: { progress: Progress | null; language: BuddyLanguage }) {
+function Covered({
+  progress,
+  language,
+  onVideo = false,
+}: {
+  progress: Progress | null;
+  language: BuddyLanguage;
+  onVideo?: boolean;
+}) {
   const ideas = progress?.ideas ?? [];
   if (!ideas.length) return null;
   const t = labels(language);
   return (
     <section aria-label={t.covered(progress!.covered, ideas.length)} className="px-4 pb-2">
-      <p className="text-meta text-muted">{t.covered(progress!.covered, ideas.length)}</p>
+      <p className={cx('text-meta', onVideo ? 'w-fit rounded-full bg-ink/55 px-2 text-canvas' : 'text-muted')}>
+        {t.covered(progress!.covered, ideas.length)}
+      </p>
       <ul className="mt-1.5 flex gap-1.5 overflow-x-auto pb-1">
         {ideas.map((idea, i) => (
           <li
@@ -158,8 +207,9 @@ function Covered({ progress, language }: { progress: Progress | null; language: 
             className={cx(
               'flex max-w-[70vw] shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-meta',
               idea.status === 'understood' && 'border-accent bg-accent text-accent-on',
-              (idea.status === 'partial' || idea.status === 'gap') && 'border-warn text-ink',
-              idea.status === 'unseen' && 'border-line text-muted',
+              idea.status !== 'understood' && onVideo && 'border-canvas/40 bg-ink/55 text-canvas',
+              !onVideo && (idea.status === 'partial' || idea.status === 'gap') && 'border-warn text-ink',
+              !onVideo && idea.status === 'unseen' && 'border-line text-muted',
             )}
           >
             {idea.status === 'understood' && <Check size={14} aria-hidden />}
@@ -171,14 +221,45 @@ function Covered({ progress, language }: { progress: Progress | null; language: 
   );
 }
 
-/** The buddy: avatar video if the avatar is on, otherwise an orb that shows its state. */
+/** The avatar's video, if the avatar is on (any video from someone other than the learner). */
+function useAvatarTrack() {
+  const { localParticipant } = useLocalParticipant();
+  const videos = useTracks([Track.Source.Camera, Track.Source.Unknown], { onlySubscribed: true });
+  return videos.find((v) => v.participant.identity !== localParticipant?.identity);
+}
+
+/**
+ * Subtitles over the video: the line being spoken now (the buddy's, or the
+ * learner's while they talk), like captions on a call, not a chat history.
+ */
+function Captions({ language }: { language: BuddyLanguage }) {
+  const t = labels(language);
+  const lines = useTranscriptions();
+  const { localParticipant } = useLocalParticipant();
+  const { state } = useVoiceAssistant();
+  const last = [...lines].reverse().find((l) => l.text.trim());
+  if (!last) return null;
+  const mine = last.participantInfo.identity === localParticipant?.identity;
+  return (
+    <div aria-live="polite" className="mx-auto max-w-xl">
+      {state === 'thinking' && mine && <p className="mb-1 text-center text-meta text-canvas/80">{t.thinking}</p>}
+      <p
+        className={cx(
+          'rounded-ui px-4 py-2.5 text-center text-lead',
+          mine ? 'bg-accent/85 text-accent-on' : 'bg-ink/65 text-canvas',
+        )}
+      >
+        <span className="sr-only">{mine ? t.you : t.buddy}: </span>
+        {last.text}
+      </p>
+    </div>
+  );
+}
+
+/** Voice-only: an orb that shows the buddy's state. */
 function Buddy({ language }: { language: BuddyLanguage }) {
   const t = labels(language);
   const { state } = useVoiceAssistant();
-  const { localParticipant } = useLocalParticipant();
-  const videos = useTracks([Track.Source.Camera, Track.Source.Unknown], { onlySubscribed: true });
-  const avatar = videos.find((v) => v.participant.identity !== localParticipant?.identity);
-
   const label =
     state === 'speaking'
       ? t.speaking
@@ -190,20 +271,16 @@ function Buddy({ language }: { language: BuddyLanguage }) {
 
   return (
     <div className="flex shrink-0 flex-col items-center py-3">
-      {avatar ? (
-        <VideoTrack trackRef={avatar} className="h-48 w-48 rounded-full object-cover" />
-      ) : (
-        <div
-          aria-hidden
-          className={cx(
-            'h-36 w-36 rounded-full border-4 transition-all duration-300 sm:h-44 sm:w-44',
-            state === 'speaking' && 'scale-105 animate-pulse border-accent bg-accent',
-            state === 'thinking' && 'animate-pulse border-accent bg-accent/30',
-            state === 'listening' && 'border-accent bg-accent/10',
-            !['speaking', 'thinking', 'listening'].includes(state) && 'border-line bg-sunken',
-          )}
-        />
-      )}
+      <div
+        aria-hidden
+        className={cx(
+          'h-36 w-36 rounded-full border-4 transition-all duration-300 sm:h-44 sm:w-44',
+          state === 'speaking' && 'scale-105 animate-pulse border-accent bg-accent',
+          state === 'thinking' && 'animate-pulse border-accent bg-accent/30',
+          state === 'listening' && 'border-accent bg-accent/10',
+          !['speaking', 'thinking', 'listening'].includes(state) && 'border-line bg-sunken',
+        )}
+      />
       <p role="status" className="mt-3 text-lead text-muted">
         {label}
       </p>
@@ -249,7 +326,15 @@ function Transcript({ language }: { language: BuddyLanguage }) {
 }
 
 /** Language switch and the big mic button. */
-function Controls({ language, onLanguage }: { language: BuddyLanguage; onLanguage: (l: BuddyLanguage) => void }) {
+function Controls({
+  language,
+  onLanguage,
+  onVideo = false,
+}: {
+  language: BuddyLanguage;
+  onLanguage: (l: BuddyLanguage) => void;
+  onVideo?: boolean;
+}) {
   const t = labels(language);
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
 
@@ -269,7 +354,12 @@ function Controls({ language, onLanguage }: { language: BuddyLanguage; onLanguag
   );
 
   return (
-    <footer className="flex items-center justify-between gap-3 border-t border-line bg-surface px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3">
+    <footer
+      className={cx(
+        'flex items-center justify-between gap-3 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3',
+        onVideo ? 'bg-ink/40' : 'border-t border-line bg-surface',
+      )}
+    >
       <div role="radiogroup" aria-label="Language" className="flex gap-1">
         {LANGUAGES.map((l) => (
           <button
@@ -279,7 +369,13 @@ function Controls({ language, onLanguage }: { language: BuddyLanguage; onLanguag
             onClick={() => switchTo(l.code)}
             className={cx(
               'h-10 min-w-11 rounded-full px-3 text-body',
-              language === l.code ? 'bg-ink text-canvas' : 'border border-line text-muted',
+              language === l.code
+                ? onVideo
+                  ? 'bg-canvas text-ink'
+                  : 'bg-ink text-canvas'
+                : onVideo
+                  ? 'border border-canvas/40 text-canvas'
+                  : 'border border-line text-muted',
             )}
           >
             {l.short}

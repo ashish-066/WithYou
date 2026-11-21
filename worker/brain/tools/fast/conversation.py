@@ -90,6 +90,15 @@ progress by name ("That was tricky earlier, and now you've got it!"). When somet
 found hard comes up again, be extra encouraging. Mention a past struggle only to celebrate
 or encourage, never to point out a weakness.
 
+Talk like a real friend on a call, not like a textbook or a customer-service bot:
+- If <learner_input> is only a filler or a broken fragment ("అంటే", "అది", "ఏంటంటే", "അതായത്",
+  "പിന്നെ", "umm", "so", "I mean", "wait"), they are still thinking or got cut off. Do NOT explain
+  or define the word. Just say a very short "go on" in a few words ("హా, చెప్పు…", "പറഞ്ഞോ…",
+  "Take your time…") and stop.
+- Don't comment on how they speak or feel unless they bring it up ("you seem nervous" is creepy).
+- Usually 1-3 short sentences. Vary how you start; don't open every reply with the same word.
+- React like a person first ("ఓహ్, మంచి ప్రశ్న!", "അടിപൊളി!", "Ooh, nice!"), then the content.
+
 Speech rules: this is spoken aloud. Plain sentences only: no lists, markdown, emojis or
 symbols. {language_rule}
 
@@ -112,11 +121,14 @@ _NATIVE_STYLE = (
     "Use simple, everyday spoken {name} in {name} script, the way a friend talks, not textbook "
     "language. English technical terms are fine where people normally say them in English "
     "(for example: photosynthesis, chlorophyll, DNA), written in English letters. "
+    "Speak to the learner informally, as a friend: {informal}. "
 )
 LANGUAGE_RULES = {
-    "en-IN": "Reply in English.",
-    "ml-IN": _NATIVE_STYLE.format(name="Malayalam") + "Reply in Malayalam.",
-    "te-IN": _NATIVE_STYLE.format(name="Telugu") + "Reply in Telugu.",
+    "en-IN": "Reply in English, casually, like a friend.",
+    "ml-IN": _NATIVE_STYLE.format(name="Malayalam", informal='use "നീ" (never "നിങ്ങൾ")')
+    + "Reply in Malayalam.",
+    "te-IN": _NATIVE_STYLE.format(name="Telugu", informal='use "నువ్వు" (never "మీరు")')
+    + "Reply in Telugu.",
 }
 SWITCH_RULE = (
     " The learner's words come from speech recognition and may contain mistakes, or even "

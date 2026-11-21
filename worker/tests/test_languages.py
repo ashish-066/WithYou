@@ -130,7 +130,8 @@ def test_prompt_language_rule_follows_the_session(monkeypatch):
     monkeypatch.setattr(settings, "buddy_language", "ml-IN")
     assert "Reply in Telugu." in conversation.language_rule({"language": "te-IN"})
     assert "Reply in Malayalam." in conversation.language_rule({})
-    assert "Reply in English." in conversation.language_rule({"language": "en-IN"})
+    assert "Reply in English" in conversation.language_rule({"language": "en-IN"})
+    assert "నువ్వు" in conversation.language_rule({"language": "te-IN"})  # friendly "you"
     rule = conversation.language_rule({"language": "te-IN"})
     assert "never copy a wrong script" in rule and "change language" in rule
 

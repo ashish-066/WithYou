@@ -93,6 +93,8 @@ class Settings(BaseSettings):
     # Can the learner cut the buddy off mid-sentence? Off: the buddy's own voice
     # from laptop speakers kept interrupting it (echo loop). With it on, this much
     # speech is needed to interrupt.
+    # Seconds of silence before the learner's turn counts as finished
+    endpointing_min_delay: float = 0.9
     allow_interruptions: bool = False
     interrupt_min_duration: float = 1.2
     interrupt_min_words: int = 3
