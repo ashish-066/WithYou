@@ -86,3 +86,90 @@
     animation: none !important;
   }
 }
+
+/*
+ * Study buddy: a student's notebook. Warm paper, pencil ink, leaf green,
+ * turmeric (highlighter / sticky notes) and terracotta. Text colours pass AA on
+ * paper and surface.
+ */
+[data-area='notebook'] {
+  --c-bg: 250 245 233; /* #FAF5E9 paper */
+  --c-surface: 255 252 244;
+  --c-sunken: 241 233 214;
+  --c-line: 230 219 196; /* ruled lines */
+  --c-line-strong: 199 184 156;
+  --c-ink: 44 38 33; /* pencil-dark ink */
+  --c-muted: 110 99 86;
+  --c-accent: 40 101 74; /* #28654A leaf green */
+  --c-on-accent: 255 252 244;
+  --c-good: 40 101 74;
+  --c-warn: 150 96 0;
+  --c-bad: 168 68 42;
+  --c-focus: 40 101 74;
+  --c-turmeric: 242 190 66; /* highlighter, sticky notes (backgrounds only) */
+  --c-turmeric-soft: 252 236 186;
+  --c-terracotta: 194 96 63;
+  --c-margin: 226 150 138; /* the red margin line */
+  --font-display: 'Baloo Tammudu 2', 'Baloo Chettan 2', Georgia, serif;
+  --font-ui: 'Baloo Tammudu 2', 'Baloo Chettan 2', 'Instrument Sans Variable', sans-serif;
+  --font-hand: 'Caveat', 'Baloo Tammudu 2', cursive;
+  --radius: 14px;
+  color-scheme: light;
+  font-size: 15px;
+}
+
+/* Ruled notebook paper with a margin line (SVG pattern: the UI rules forbid CSS gradients) */
+[data-area='notebook'] .paper {
+  background-color: rgb(var(--c-bg));
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='34'%3E%3Cline x1='0' y1='33.5' x2='8' y2='33.5' stroke='%23E6DBC4' stroke-width='1'/%3E%3C/svg%3E");
+}
+[data-area='notebook'] .margin-line {
+  box-shadow: inset 2px 0 0 0 rgb(var(--c-margin) / 0.55);
+}
+
+/* Hand-drawn boxes: uneven corners read as drawn, not generated */
+[data-area='notebook'] .sketch {
+  border: 2px solid rgb(var(--c-ink) / 0.82);
+  border-radius: 255px 14px 225px 14px / 14px 225px 14px 255px;
+}
+[data-area='notebook'] .sketch-soft {
+  border: 1.5px solid rgb(var(--c-ink) / 0.35);
+  border-radius: 14px 225px 14px 255px / 255px 14px 225px 14px;
+}
+[data-area='notebook'] .sticky {
+  background: rgb(var(--c-turmeric-soft));
+  box-shadow: 0 1px 0 rgb(var(--c-ink) / 0.06), 0 8px 16px -10px rgb(var(--c-ink) / 0.35);
+}
+[data-area='notebook'] .tape::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  width: 72px;
+  height: 22px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: rgb(255 255 255 / 0.55);
+  border: 1px solid rgb(var(--c-ink) / 0.08);
+}
+[data-area='notebook'] .highlight {
+  background: rgb(var(--c-turmeric) / 0.45);
+  border-radius: 4px 10px 6px 12px;
+  padding: 0 0.2em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+@keyframes buddy-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes buddy-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+@keyframes buddy-talk {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-area='notebook'] * { animation: none !important; }
+}

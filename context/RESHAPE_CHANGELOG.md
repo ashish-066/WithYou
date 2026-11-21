@@ -291,3 +291,39 @@ Ashish's feedback (and "if stuck, note it and move ahead"). Done:
 - **Noted, not done:**
   - the in-session recap card (`/calls/recap`) is shown in the session's own language, which matches the UI unless the learner switched language mid-session
   - mood reads exist only for sessions recorded from now on (older ones show no mood)
+
+## Session summary so far (2026-11-22), for Ashish
+Commits on `main` (fresh history; the old `.git` was moved to `../presenceview-hackvesrion.git-backup`):
+
+| Step | Commit | What |
+|---|---|---|
+| Snapshot | `65a45a4` | Presence View as-is before the reshape |
+| Phase 0 | `b895eaa` | Proctoring, hiring, desktop app, DSA round and recording removed; one signed-in learner |
+| Fixes | `977de04`, `6f1be37` | Named agent dispatch; voice-only fallback when BeyondPresence fails; Redis read timeout; Deepgram TTS (Cartesia out of credits) |
+| Phase 1 | `64a87dd` | Study-buddy persona; chat/explain/check intents; gentle flow |
+| Phase 2 | `5240384`, `4156b37` | Sarvam-105B brain (reasoning off, ~1 s), Saaras STT, Bulbul v3 TTS (Kavya); Malayalam + Telugu + English; language picker |
+| Voice fixes | `338aebf`, `64c94dd`, `c857a3d`, `ae85d62` | Mojibake in Indic replies; noise suppression; echo loop (buddy hearing itself); Telugu misheard as Kannada (STT locked to the session language, switch by buttons or voice) |
+| Phase 3 | `00f68ea` | Gentle evaluator: concept map, coaching, one follow-up for vague answers |
+| Phase 4 | `fa6b1e3` | Mobile-first learner screen; installable PWA |
+| Phase 5 | `ab80a16` | Kind recap card, session memory, demo kit (`context/DEMO.md`) |
+| Phone test | `9f2a660` | Passed in Telugu. Hotspot IPv6 broke LiveKit → `sudo networksetup -setv6off Wi-Fi` |
+| Humanish | `b11744a` | Video-call layout with the avatar; fillers, informal "you", shorter replies |
+| LiveKit | `5266b6c` | Old interviewer deployed on project `aa-v5cciyrx` joined every room → moved to clean project `withyou-vbwmh652` |
+| Talk mode | `53f86a8` | "Just talk" emotional buddy + crisis safety (Tele-MANAS 14416 / 112) |
+| Phase 6 | `2682c89`, `6a0b714` | Production app: Home, Learn, History, Insights, Profile; `/me` API; migration 0006 |
+| Phase 7 | `2fdb0f9`, `8714915` | History fixes; translation to the chosen language; personal suggestions; "ideas" → concepts; mood + learning levels |
+
+**Demo account:** `demo.learner@studybuddy.local` / `demo-password-123` (5 sessions, streak, concepts, moods, one Malayalam session).
+
+**Running locally:** 4 tabs (worker, API, agent, web) + a Cloudflare tunnel for the phone; keep IPv6 off on the hotspot.
+
+## Phase 8 (in progress): "the UI still feels AI-ish". Direction chosen: notebook + buddy character
+Done so far (committed as work in progress, not yet visible: the pages don't use it yet):
+- Fonts: Baloo Tammudu 2 (Telugu + Latin), Baloo Chettan 2 (Malayalam), Caveat (handwritten notes), self-hosted via @fontsource.
+- A `notebook` theme area in `src/ui/tokens.css`: warm paper, pencil ink, leaf green, turmeric, terracotta, margin red; ruled-paper background (SVG pattern, since the UI rules forbid gradients); `.sketch` hand-drawn borders; `.sticky` notes with `.tape`; `.highlight`; buddy animations (bob, blink, talk); respects reduced motion.
+- Tailwind: `turmeric`, `turmeric-soft`, `terracotta` colours and a `font-hand` family.
+
+Next:
+- an SVG buddy character with expressions (happy / listening / thinking / speaking / caring) for Home and voice sessions
+- notebook-style Home (speech-bubble greeting, sticky-note "next time", margin-note streak), diary-style History, hand-plotted Insights, a notebook login
+- screenshots, then commit

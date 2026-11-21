@@ -10,3 +10,19 @@
 @import '@fontsource-variable/newsreader/opsz-italic.css';
 @import '@fontsource-variable/instrument-sans/index.css';
 @import '@fontsource-variable/jetbrains-mono/index.css';
+
+/*
+ * Study buddy ("notebook" area): rounded, friendly Indic lettering + a hand-
+ * written accent. Baloo Tammudu 2 (Telugu + Latin), Baloo Chettan 2 (Malayalam),
+ * Caveat (handwritten notes, Latin).
+ */
+@import '@fontsource/baloo-tammudu-2/400.css';
+@import '@fontsource/baloo-tammudu-2/500.css';
+@import '@fontsource/baloo-tammudu-2/600.css';
+@import '@fontsource/baloo-tammudu-2/700.css';
+@import '@fontsource/baloo-chettan-2/400.css';
+@import '@fontsource/baloo-chettan-2/500.css';
+@import '@fontsource/baloo-chettan-2/600.css';
+@import '@fontsource/baloo-chettan-2/700.css';
+@import '@fontsource/caveat/500.css';
+@import '@fontsource/caveat/700.css';

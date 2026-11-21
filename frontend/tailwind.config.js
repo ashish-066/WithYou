@@ -25,11 +25,14 @@ export default {
         good: token('good'),
         warn: token('warn'),
         bad: token('bad'),
+        turmeric: { DEFAULT: token('turmeric'), soft: token('turmeric-soft') },
+        terracotta: token('terracotta'),
       },
       fontFamily: {
         display: ['var(--font-display)'],
         ui: ['var(--font-ui)'],
         mono: ['var(--font-mono)'],
+        hand: ['var(--font-hand)'],
       },
       // 13 / 14 / 16 / 20 / 28 / 40
       fontSize: {
