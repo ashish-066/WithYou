@@ -71,8 +71,6 @@ jobs:
       - run: npm ci
       - name: Typecheck + build
         run: npm run build
-      # ESLint step added once frontend lint is set up (needs the TypeScript
-      # ESLint parser; see context/LAUNCH_LOG.md Phase 0.4)
 
   images:
     name: image ${{ matrix.image }} (build)
@@ -90,32 +88,20 @@ jobs:
       - name: Compose file is valid
         if: matrix.image == 'api'
         run: docker compose config -q
-      # Build only; pushing to a registry and deploying come with the CD
-      # pipeline once hosting is chosen (docs/DEPLOY.md)
+      # Build only; deploying is deploy/buddy/deploy.sh
       - name: Build
         run: >-
           docker build -f ${{ matrix.file }}
           ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
           -t alex-${{ matrix.image }}:ci .
 
-  infra:
-    name: infra (terraform + shell)
+  deploy-script:
+    name: deploy script (shellcheck)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.13.5"
-      - name: Terraform format
-        run: terraform -chdir=infra/terraform fmt -recursive -check -diff
-      - name: Terraform validate
-        run: |
-          for dir in bootstrap envs/staging envs/production; do
-            terraform -chdir=infra/terraform/$dir init -backend=false -input=false
-            terraform -chdir=infra/terraform/$dir validate
-          done
-      - name: ShellCheck deploy scripts
-        run: shellcheck deploy/deploy.sh scripts/aws/*.sh
+      - name: ShellCheck
+        run: shellcheck deploy/buddy/deploy.sh
 
   secrets:
     name: secret scan

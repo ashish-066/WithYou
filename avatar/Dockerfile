@@ -2,7 +2,7 @@
 # Build from the repo root, since the services share ../shared:
 #   docker build -f avatar/Dockerfile --target api   -t alex-api .
 #   docker build -f avatar/Dockerfile --target agent -t alex-agent .
-# Base images are pinned by digest; update them deliberately (see docs/DEPLOY.md).
+# Base images are pinned by digest; update them deliberately (deploy/buddy/).
 
 ARG PYTHON_IMAGE=python:3.12-slim@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159
 ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.12.0@sha256:606e70c71c852d03f611b1e56a195d08648507018a7057fab82c4974c4eae105

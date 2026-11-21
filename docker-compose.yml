@@ -11,7 +11,7 @@
 # Don't run this and the host processes (mprocs / `agents.entrypoint dev`) at
 # the same time against one LiveKit project: LiveKit may hand a call to the
 # agent of the other stack, which reads a different Redis.
-# See docs/DEPLOY.md.
+# Production: deploy/buddy/ (this file + Caddy HTTPS).
 
 name: alex
 
