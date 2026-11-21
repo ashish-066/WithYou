@@ -1,0 +1,5 @@
+# HTTPS (Let's Encrypt) for the study buddy; DOMAIN is e.g. 1.2.3.4.sslip.io
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy frontend:8080
+}

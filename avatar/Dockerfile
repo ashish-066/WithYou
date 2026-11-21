@@ -29,9 +29,6 @@ FROM ${PYTHON_IMAGE} AS runtime
 RUN useradd --uid 10001 --user-group --create-home --shell /usr/sbin/nologin app
 COPY --from=build /opt/venv /opt/venv
 COPY avatar /app
-# api/dsa_routes.py imports the worker's DSA models from ../worker (pydantic +
-# redis only); keep the same relative layout
-COPY worker/dsa /worker/dsa
 ENV PATH=/opt/venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
