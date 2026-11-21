@@ -1,0 +1,102 @@
+# Production/staging services on the app server (deploy.sh runs this).
+# Values come from /opt/alex/.env (written by deploy.sh) and the env files it
+# builds from SSM Parameter Store. The agent runs separately
+# (docker-compose.agent.yml) so a deploy can start the new one before the old
+# one drains.
+
+name: alex
+
+x-redis-url: &redis-url redis://:${REDIS_PASSWORD}@redis:6379/0
+
+services:
+  caddy:
+    image: caddy:2.10-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - frontend
+    restart: always
+
+  redis:
+    image: redis:7.4-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
+    command:
+      - sh
+      - -c
+      - exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes --appendfsync everysec
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: always
+
+  # Run by deploy.sh before the services: `docker compose run --rm migrate`
+  migrate:
+    image: ${REGISTRY}/alex-api:${IMAGE_TAG}
+    command: ["python", "-m", "alex_db.migrate"]
+    env_file: [common.env]
+    profiles: ["migrate"]
+
+  api:
+    image: ${REGISTRY}/alex-api:${IMAGE_TAG}
+    env_file: [common.env, avatar.env]
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT}
+      REDIS_URL: *redis-url
+      CORS_ORIGINS: https://${DOMAIN}
+      # Caddy and the frontend nginx both append to X-Forwarded-For
+      TRUSTED_PROXY_HOPS: "2"
+      # Every deployed server is on the public internet: no open sign-up (accounts come
+      # from an admin or scripts.create_user) and no demo, also on staging, where the
+      # app's defaults would turn both on because ENVIRONMENT isn't "production".
+      ALLOW_SIGNUP: "false"
+      ENABLE_DEMO: "false"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+
+  worker:
+    image: ${REGISTRY}/alex-worker:${IMAGE_TAG}
+    env_file: [common.env, worker.env]
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT}
+      REDIS_URL: *redis-url
+      SANDBOX_MODE: docker
+      SANDBOX_IMAGE: python:3.12-slim@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159
+      SANDBOX_RUNTIME: ${SANDBOX_RUNTIME-runsc}
+      DOCKER_HOST: tcp://${SANDBOX_HOST}:2376
+      DOCKER_TLS_VERIFY: "1"
+      DOCKER_CERT_PATH: /certs
+    volumes:
+      - ./sandbox-certs:/certs:ro
+    stop_grace_period: 120s
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+
+  frontend:
+    image: ${REGISTRY}/alex-frontend:${IMAGE_TAG}
+    environment:
+      API_UPSTREAM: http://api:8001
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: always
+
+volumes:
+  caddy-data:
+  caddy-config:
+  redis-data:

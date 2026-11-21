@@ -1,0 +1,61 @@
+{
+  "name": "presence-view-desktop",
+  "productName": "Presence View",
+  "version": "0.1.1",
+  "private": true,
+  "description": "Locked interview app for Presence View",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test \"test/*.test.js\"",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.presenceview.interview",
+    "productName": "Presence View",
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "app-config.json"
+    ],
+    "protocols": [
+      {
+        "name": "Presence View",
+        "schemes": [
+          "presenceview"
+        ]
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.business",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "NSCameraUsageDescription": "Your camera is used for the video interview and for proctoring.",
+        "NSMicrophoneUsageDescription": "Your microphone is used to talk with the interviewer."
+      },
+      "icon": "build/icon.icns"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    }
+  },
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0"
+  }
+}

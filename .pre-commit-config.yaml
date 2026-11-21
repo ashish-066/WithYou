@@ -1,0 +1,7 @@
+# Install once: `brew install pre-commit && pre-commit install`
+# Blocks commits that contain secrets (API keys, tokens, private keys).
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks

@@ -1,0 +1,620 @@
+"""Interview state definition for LangGraph with Dual-Brain Architecture.
+
+This module defines the TypedDict that represents the state passed through
+the LangGraph interview agent. State is persisted to Redis between invocations.
+
+Extended for dual-brain (fast/slow) architecture with DFA-based routing.
+"""
+
+from typing import Any, Literal
+
+from typing_extensions import TypedDict
+
+# DSAInterviewState is defined in dsa/models.py and imported lazily
+# to avoid circular imports during startup.
+# It is stored as a plain dict in InterviewState and validated on use.
+
+# =============================================================================
+# Message Types
+# =============================================================================
+
+
+class Message(TypedDict):
+    """A single message in the conversation."""
+
+    role: Literal["system", "assistant", "user"]
+    content: str
+    timestamp: str  # ISO 8601 format
+
+
+class MessageSummary(TypedDict):
+    """Compressed representation of older messages for token optimization."""
+
+    turn_range: tuple[int, int]  # (start_turn, end_turn)
+    key_points: list[str]
+    topics_discussed: list[str]
+    summary_text: str
+
+
+# =============================================================================
+# Tool Types
+# =============================================================================
+
+
+class ToolCall(TypedDict):
+    """A pending or executed tool call."""
+
+    tool_name: str
+    tool_type: Literal["fast", "slow"]
+    params: dict[str, Any]
+    priority: int  # Lower = higher priority
+
+
+class ToolResult(TypedDict):
+    """Result from a tool invocation."""
+
+    tool_name: str
+    input: str
+    output: Any
+    success: bool
+    confidence: float  # 0-1
+    source: str  # Where data came from
+    timestamp: str
+
+
+# =============================================================================
+# Claim Verification Types (for real-time verification engine)
+# =============================================================================
+
+
+class Claim(TypedDict):
+    """A verifiable claim extracted from candidate response."""
+
+    id: str
+    claim_type: Literal[
+        "role", "company", "technology", "duration", "metric", "project", "education"
+    ]
+    content: str
+    source_text: str  # Original transcript excerpt
+    timestamp: str
+
+
+class EvidenceMatch(TypedDict):
+    """Evidence found for/against a claim."""
+
+    source: Literal["resume", "github", "linkedin", "live_crawl", "niche_skills"]
+    matched_content: str
+    relevance_score: float  # 0-1
+    match_type: Literal["exact", "partial", "semantic", "none"]
+
+
+class VerificationResult(TypedDict):
+    """Result of verifying a claim against evidence.
+
+    Verdicts:
+    - verified: Strong evidence supports the claim (exact match found)
+    - unverified: No evidence found or only weak/partial evidence
+    - contradiction: Evidence explicitly contradicts the claim
+    """
+
+    claim: Claim
+    evidence: list[EvidenceMatch]
+    verdict: Literal["verified", "unverified", "contradiction"]
+    confidence: float  # 0-1
+    reasoning: str
+    suggested_followup: str | None
+
+
+# =============================================================================
+# Slow Task Types
+# =============================================================================
+
+
+class SlowTask(TypedDict):
+    """A task queued for the slow brain."""
+
+    task_id: str
+    task_type: Literal[
+        "profile_crawl",
+        "report_descriptive",
+        "report_data",
+        "deep_analysis",
+        "verify_claims",
+        "hume_emotional_analysis",
+        # --- DSA Round 2 task types ---
+        "dsa_evaluate",   # Extract evidence + update rubric scores after a turn
+        "dsa_report",     # Generate final DSA report
+    ]
+    params: dict[str, Any]
+    priority: int  # Lower = higher priority
+    created_at: str
+
+
+# =============================================================================
+# DFA State Machine Types
+# =============================================================================
+
+
+DFAStateType = Literal[
+    "idle",
+    "routing",
+    "fast_processing",
+    "slow_processing",
+    "tool_executing",
+    "responding",
+    "concluding",
+]
+
+
+class DFAState(TypedDict):
+    """Deterministic Finite Automaton state for brain routing."""
+
+    current_state: DFAStateType
+    previous_state: DFAStateType | None
+    transitions: list[str]  # History of state transitions
+    transition_count: int
+
+
+# =============================================================================
+# Anti-Cheating Types
+# =============================================================================
+
+
+class CheatFlag(TypedDict):
+    """A detected cheating indicator from proctoring system.
+
+    These flags are sent from the client-side proctoring (camera analysis)
+    or detected server-side through behavioral analysis.
+    """
+
+    id: str  # Unique flag ID
+    flag_type: Literal[
+        "multiple_faces",  # More than one person detected in frame
+        "no_face",  # Candidate face not visible
+        "phone_detected",  # Mobile phone visible in frame
+        "earphone_detected",  # Earphone/earbud detected
+        "tab_switch",  # Candidate switched browser tab/window
+        "screen_share",  # Screen sharing detected
+        "voice_change",  # Different voice detected (possible coaching)
+        "copy_paste",  # Copy-paste behavior detected
+        "ai_assistance",  # AI-generated response suspected
+        "suspicious_timing",  # Unusually fast/slow response
+        "blocked_app",  # Desktop app: a blocked app was open during the interview
+        "second_screen",  # Desktop app: an extra screen was connected
+        "app_closed",  # Desktop app: closed or crashed before the interview was submitted
+        "exit_attempt",  # Desktop app: candidate tried to close it
+        "emergency_exit",  # Desktop app: candidate used the emergency exit
+        "lock_expired",  # Desktop app: unlocked itself at its time limit
+        "browser_mode",  # Interview taken in a browser, without the locked app
+    ]
+    severity: Literal["low", "medium", "high", "critical"]
+    confidence: float  # 0-1, detection confidence
+    description: str  # Human-readable description
+    evidence: str | None  # Additional evidence (e.g., screenshot hash, detection details)
+    timestamp: str  # ISO 8601 format
+    turn_number: int  # Interview turn when detected
+
+
+class IntegrityReport(TypedDict):
+    """Summary of candidate integrity during the interview.
+
+    Generated at the end of the interview for review.
+    """
+
+    integrity_score: float  # 0-1, overall integrity assessment
+    total_flags: int
+    flags_by_type: dict[str, int]  # Count by flag_type
+    flags_by_severity: dict[str, int]  # Count by severity
+    critical_incidents: list[CheatFlag]  # High/critical severity flags
+    timeline: list[CheatFlag]  # All flags in chronological order
+    recommendation: Literal[
+        "proceed",  # No significant issues
+        "review",  # Some flags, needs human review
+        "flag",  # Multiple issues, interview may be compromised
+        "reject",  # Critical violations detected
+    ]
+    summary: str  # AI-generated summary of integrity concerns
+
+
+# =============================================================================
+# Evaluation Types
+# =============================================================================
+
+
+class RunningScores(TypedDict, total=False):
+    """Running evaluation scores updated during interview."""
+
+    technical_depth: float
+    problem_solving: float
+    communication: float
+    experience_fit: float
+    cultural_alignment: float
+
+
+class TimestampNote(TypedDict):
+    """A noted moment during the interview."""
+
+    timestamp: str
+    tag: Literal[
+        "key_insight",
+        "concern",
+        "strong_answer",
+        "weak_answer",
+        "claim_made",
+        "topic_change",
+    ]
+    content: str
+    turn_number: int
+    video_seconds: float | None  # Elapsed seconds from interview start for video sync
+
+
+# =============================================================================
+# Report Types
+# =============================================================================
+
+
+class DescriptiveReport(TypedDict):
+    """Narrative interview report."""
+
+    summary: str
+    strengths: list[str]
+    concerns: list[str]
+    recommendation: Literal["strong_yes", "yes", "maybe", "no", "strong_no"]
+    detailed_sections: dict[str, str]
+
+
+class AnalyticsData(TypedDict):
+    """Structured data for frontend visualization."""
+
+    rubric_scores: dict[str, float]
+    skill_distribution: dict[str, int]
+    verification_summary: dict[str, int]  # {"verified": N, "unverified": M, ...}
+    timeline: list[dict[str, Any]]
+    trust_score: float
+    topic_coverage: dict[str, float]  # topic -> coverage percentage
+
+
+# =============================================================================
+# Skill Tree Scoring Types (Evidence-Based Assessment)
+# =============================================================================
+
+
+class SkillTreeState(TypedDict, total=False):
+    """State for skill tree scoring during interview.
+
+    Tracks the evidence-based skill assessment that grows as
+    the interview progresses.
+    """
+
+    # Role requirements (parsed from JD)
+    role_id: str
+    role_title: str
+    skill_weights: dict[str, float]  # skill_name -> weight (0-1)
+
+    # Skill ladders (generated binary questions)
+    ladders_generated: bool
+    ladder_data: dict[str, Any]  # Serialized skill ladders
+
+    # Skill tree state (candidate's assessed levels)
+    tree_initialized: bool
+    current_levels: dict[str, int]  # skill_name -> current_level (0-5)
+    evidence_counts: dict[str, int]  # skill_name -> evidence count
+
+    # Interview nudging
+    recent_skills: list[str]  # Skills discussed in recent turns
+    next_suggested_skill: str | None
+    next_suggested_level: int | None
+    next_suggested_question: str | None
+
+    # Final scoring
+    weighted_score: float | None  # 0-1
+    score_percentage: float | None  # 0-100
+    elo_rating: float | None  # Elo rating if available
+    elo_percentile: float | None  # Percentile rank if available
+
+
+# =============================================================================
+# Candidate Profile Types
+# =============================================================================
+
+
+class CandidateProfile(TypedDict, total=False):
+    """Pre-crawled candidate data for verification."""
+
+    resume_data: dict[str, Any]
+    github_data: dict[str, Any]
+    linkedin_data: dict[str, Any]
+    niche_skills: dict[str, Any]  # NicheSkillsProfile serialized as dict
+    skills_extracted: list[str]
+    experience_years: int | None
+    crawled_at: str
+
+
+# =============================================================================
+# Emotional Analysis Types (Hume.AI)
+# =============================================================================
+
+
+class EmotionalTimepoint(TypedDict):
+    """Single timestamp emotional data point."""
+
+    timestamp: float  # Seconds from video start
+    confidence: float  # 0-1 (aggregated from Hume emotions)
+    stress: float  # 0-1
+    engagement: float  # 0-1
+    energy: float  # 0-1
+
+
+class EmotionalInsights(TypedDict):
+    """Structured emotional analysis results from Hume.AI."""
+
+    summary: dict[str, float]  # avg_confidence, avg_stress, avg_engagement, avg_energy
+    timeline: list[EmotionalTimepoint]
+    highlights: list[str]  # Key emotional moments
+    overall_profile: Literal["confident", "anxious", "neutral", "variable"]
+
+
+# =============================================================================
+# Main Interview State
+# =============================================================================
+
+
+class InterviewState(TypedDict, total=False):
+    """Complete interview state passed through the LangGraph.
+
+    This state is persisted to Redis and loaded on each message.
+    The `total=False` allows partial updates.
+
+    Extended for dual-brain architecture with DFA routing.
+    """
+
+    # =========================================================================
+    # Interview Mode (Round 1 vs Round 2 DSA)
+    # =========================================================================
+    # None or "round1" → existing behaviour, all DSA fields are ignored.
+    # "round2_dsa"    → DSA interview engine is active; dsa_state is populated.
+    interview_mode: Literal["round1", "round2_dsa"] | None
+
+    # =========================================================================
+    # DSA Round 2 State
+    # =========================================================================
+    # Stored as a plain dict (DSAInterviewState) so it serialises cleanly
+    # through Redis without additional import complexity in LangGraph.
+    # Use dsa.models.DSAInterviewState for type hints when reading/writing.
+    dsa_state: dict[str, Any] | None
+
+    # =========================================================================
+    # Identifiers
+    # =========================================================================
+    session_id: str
+    candidate_id: str
+    template_id: str
+
+    # =========================================================================
+    # Job Description (for skill tree scoring)
+    # =========================================================================
+    job_description: str | None
+
+    # =========================================================================
+    # Conversation (with sliding window optimization)
+    # =========================================================================
+    messages: list[Message]  # Last 10 messages (active window)
+    message_summary: MessageSummary | None  # Summarized older messages
+    current_input: str  # Latest user input being processed
+
+    # =========================================================================
+    # Interview Progress
+    # =========================================================================
+    current_topic: str
+    topics_covered: list[str]
+    turn_count: int
+    max_turns: int  # Configurable interview length
+
+    # =========================================================================
+    # Brain Routing (Hybrid: DFA + LLM)
+    # =========================================================================
+    brain_mode: Literal["fast", "slow", "idle"]
+    dfa: DFAState
+    input_classification: Literal[
+        "conversation",
+        "question",
+        "profile_request",
+        "report_request",
+        "deep_analysis",
+        "search_request",
+        "end_signal",
+        "slow_task_trigger",
+        "unknown",
+    ]
+
+    # Routing metadata (for hybrid LLM router)
+    routing_confidence: float  # Confidence of the routing decision (0-1)
+    routing_method: Literal["prefilter", "llm", "fallback"]  # How routing was determined
+    routing_reasoning: str  # Brief explanation for routing decision (for debugging)
+    suggested_tools: list[str]  # Tools suggested by router for the selected brain
+    suggested_tool_params: dict[str, dict[str, Any]]  # Parameters for suggested tools
+
+    # =========================================================================
+    # Tool Management (Deterministic Queue)
+    # =========================================================================
+    tool_queue: list[ToolCall]  # Ordered queue of tools to execute
+    tool_results: list[ToolResult]  # Results from executed tools
+    tool_results_cache: dict[str, Any]  # Cache to avoid re-computation
+
+    # =========================================================================
+    # Slow Brain Task Queue
+    # =========================================================================
+    pending_slow_tasks: list[SlowTask]
+    completed_slow_tasks: list[str]  # Task IDs
+
+    # =========================================================================
+    # Claim Verification
+    # =========================================================================
+    pending_claims: list[Claim]
+    verified_claims: list[VerificationResult]
+    trust_score: float  # Aggregate trust score (0-1)
+
+    # =========================================================================
+    # Candidate Profile (Pre-crawled data)
+    # =========================================================================
+    candidate_urls: dict[str, str | None]  # Input URLs
+    candidate_resume_text: str | None  # Raw resume text extracted via OCR
+    candidate_linkedin_text: str | None  # LinkedIn "Save to PDF" export text, from the invite
+    background_probe: str  # one doubtful claim to probe this turn (brain/candidate_background.py)
+    candidate_profile: CandidateProfile | None
+    profile_status: Literal["not_started", "in_progress", "completed", "failed"]
+
+    # =========================================================================
+    # Evaluation
+    # =========================================================================
+    running_scores: RunningScores
+    timestamp_notes: list[TimestampNote]
+
+    # =========================================================================
+    # Report Generation
+    # =========================================================================
+    report_status: Literal["not_started", "pending", "in_progress", "completed", "failed"]
+    descriptive_report: DescriptiveReport | None
+    analytics_data: AnalyticsData | None
+
+    # =========================================================================
+    # Skill Tree Scoring (Evidence-Based Assessment)
+    # =========================================================================
+    skill_tree: SkillTreeState | None
+
+    # =========================================================================
+    # Anti-Cheating / Proctoring
+    # =========================================================================
+    cheat_flags: list[CheatFlag]
+    integrity_score: float  # 0-1, updated as flags are added
+    integrity_report: IntegrityReport | None
+
+    # =========================================================================
+    # Interview Control
+    # =========================================================================
+    interview_ended: bool
+    end_reason: str | None  # see interview_flow.EndReason
+    # Interview progress (brain/interview_flow.py): phase, unanswered questions,
+    # absences, response timings, rating history
+    flow: dict[str, Any]
+    # One-turn instruction for the interviewer from the system (never from the candidate)
+    interviewer_instruction: str
+
+    # =========================================================================
+    # Emotional Analysis (Hume.AI)
+    # =========================================================================
+    emotional_analysis_status: Literal["not_started", "queued", "processing", "completed", "failed"]
+    emotional_analysis: EmotionalInsights | None
+    hume_job_id: str | None
+
+    # =========================================================================
+    # Security Events
+    # =========================================================================
+    security_events: list[dict[str, Any]]
+
+    # =========================================================================
+    # Metadata
+    # =========================================================================
+    started_at: str
+    last_updated: str
+
+    # =========================================================================
+    # Output - the response to send back
+    # =========================================================================
+    response: str
+    video_url: str | None
+
+
+# =============================================================================
+# State Factory Functions
+# =============================================================================
+
+
+def create_default_dfa_state() -> DFAState:
+    """Create initial DFA state."""
+    return DFAState(
+        current_state="idle",
+        previous_state=None,
+        transitions=[],
+        transition_count=0,
+    )
+
+
+def create_default_interview_state(session_id: str) -> InterviewState:
+    """Create a default empty interview state with all fields initialized."""
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc).isoformat()
+
+    return InterviewState(
+        # Identifiers
+        session_id=session_id,
+        candidate_id="",
+        template_id="",
+        # Job Description
+        job_description=None,
+        # Conversation
+        messages=[],
+        message_summary=None,
+        current_input="",
+        # Interview Progress
+        current_topic="introduction",
+        topics_covered=[],
+        turn_count=0,
+        max_turns=40,  # safety net; the time budget ends interviews (brain/interview_flow.py)
+        # Brain Routing
+        brain_mode="idle",
+        dfa=create_default_dfa_state(),
+        input_classification="unknown",
+        routing_confidence=0.0,
+        routing_method="prefilter",
+        routing_reasoning="",
+        suggested_tools=[],
+        suggested_tool_params={},
+        # Tool Management
+        tool_queue=[],
+        tool_results=[],
+        tool_results_cache={},
+        # Slow Tasks
+        pending_slow_tasks=[],
+        completed_slow_tasks=[],
+        # Claim Verification
+        pending_claims=[],
+        verified_claims=[],
+        trust_score=1.0,  # Start with full trust
+        # Candidate Profile
+        candidate_urls={},
+        candidate_resume_text=None,
+        candidate_linkedin_text=None,
+        background_probe="",
+        candidate_profile=None,
+        profile_status="not_started",
+        # Evaluation
+        running_scores={},
+        timestamp_notes=[],
+        # Report
+        report_status="not_started",
+        descriptive_report=None,
+        analytics_data=None,
+        # Skill Tree Scoring
+        skill_tree=None,
+        # Anti-Cheating
+        cheat_flags=[],
+        integrity_score=1.0,  # Start with full integrity
+        integrity_report=None,
+        # Control
+        interview_ended=False,
+        end_reason=None,
+        flow={},
+        interviewer_instruction="",
+        # Interview Mode (Round 1 default)
+        interview_mode="round1",
+        # DSA State (None for Round 1)
+        dsa_state=None,
+        # Metadata
+        started_at=now,
+        last_updated=now,
+        # Output
+        response="",
+        video_url=None,
+    )

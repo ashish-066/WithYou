@@ -1,0 +1,72 @@
+[project]
+name = "presence-view-brain"
+version = "0.1.0"
+description = "Presence View AI Interview Platform - Brain Worker"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "langgraph>=0.2",
+    "langchain-core>=0.3",
+    "langchain-openai>=0.2",
+    "redis[hiredis]>=5.0",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "black>=26.1.0",
+    "python-dotenv>=1.2.1",
+    "google-generativeai>=0.8.6",
+    "langchain-google-genai>=2.0",
+    "pypdf>=6.6.2",
+    "tavily-python>=0.7.19",
+    "bs4>=0.0.2",
+    # 0.14 removed expression measurement (core/hume_client.py uses it)
+    "hume>=0.6.0,<0.14",
+    "numpy>=1.24.0",
+    "alex-db",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["core", "brain", "services"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+# Long lines are mostly LLM prompt strings; wrapping them is churn, not a fix
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# load_dotenv() must run before these imports read the environment
+"brain/tools/fast/tavily_search.py" = ["E402"]
+"scoring/ladder_generator.py" = ["E402"]
+# DSA state types are grouped with their section further down the module
+"dsa/models.py" = ["E402"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# brain/tools/test_tools.py is a manual script that calls live services
+testpaths = ["tests"]
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.uv.sources]
+alex-db = { path = "../shared", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.14.14",
+]

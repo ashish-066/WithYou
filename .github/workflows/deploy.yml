@@ -1,0 +1,101 @@
+name: Deploy
+
+# Push to main: build images (tag = commit SHA), push to ECR, deploy to staging.
+# Production, and rollbacks: run this workflow by hand ("Run workflow") with an
+# environment and an image tag that was already built (a commit SHA on main).
+#
+# Needs repository variables (Settings > Secrets and variables > Actions >
+# Variables): AWS_DEPLOY_ROLE_ARN (from infra/terraform/bootstrap) and
+# optionally AWS_REGION. No AWS keys are stored in GitHub (OIDC).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Where to deploy
+        type: choice
+        options: [staging, production]
+        default: production
+      tag:
+        description: Image tag to deploy (full commit SHA of an earlier build on main)
+        type: string
+        required: true
+
+permissions:
+  id-token: write # OIDC token for AWS
+  contents: read
+
+# One deploy at a time; never cancel one halfway
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+
+jobs:
+  build:
+    # Skipped until AWS is set up (docs/AWS_SETUP.md)
+    if: github.event_name == 'push' && vars.AWS_DEPLOY_ROLE_ARN != ''
+    name: build ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { image: api, file: avatar/Dockerfile, target: api }
+          - { image: agent, file: avatar/Dockerfile, target: agent }
+          - { image: worker, file: worker/Dockerfile, target: "" }
+          - { image: frontend, file: frontend/Dockerfile, target: "" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/alex-${{ matrix.image }}:${{ github.sha }}
+        run: |
+          docker build -f ${{ matrix.file }} \
+            ${{ matrix.target && format('--target {0}', matrix.target) || '' }} \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
+            -t "$IMAGE" .
+          docker push "$IMAGE"
+
+  staging:
+    # Skipped until AWS is set up (docs/AWS_SETUP.md)
+    if: github.event_name == 'push' && vars.AWS_DEPLOY_ROLE_ARN != ''
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Deploy to staging
+        run: scripts/aws/deploy-release.sh staging "${{ github.sha }}"
+
+  manual:
+    if: github.event_name == 'workflow_dispatch'
+    name: deploy ${{ inputs.tag }} to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      # Deploy scripts from the commit being deployed, so a rollback also
+      # rolls back the compose files
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Deploy
+        env:
+          TARGET: ${{ inputs.environment }}
+          TAG: ${{ inputs.tag }}
+        run: scripts/aws/deploy-release.sh "$TARGET" "$TAG"

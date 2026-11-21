@@ -1,0 +1,16 @@
+# Run the whole local stack with one command, from the repo root:
+#   brew install mprocs && mprocs
+# Requires Redis running locally (brew services start redis).
+procs:
+  worker:
+    shell: "uv run worker.py"
+    cwd: "worker"
+  avatar_fastapi:
+    shell: "uv run python main.py"
+    cwd: "avatar"
+  avatar_livekit:
+    shell: "uv run python -m agents.entrypoint dev"
+    cwd: "avatar"
+  frontend:
+    shell: "npm run dev"
+    cwd: "frontend"

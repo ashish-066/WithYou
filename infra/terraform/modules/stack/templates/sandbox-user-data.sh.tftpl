@@ -1,0 +1,58 @@
+#!/bin/bash
+# Sandbox server first boot: Docker with gVisor, its API on 2376 with mutual
+# TLS (only the worker's client certificate is accepted). Nothing else runs here.
+set -euxo pipefail
+export DEBIAN_FRONTEND=noninteractive
+
+apt-get update
+apt-get install -y ca-certificates curl gnupg
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+. /etc/os-release
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $VERSION_CODENAME stable" \
+  > /etc/apt/sources.list.d/docker.list
+
+# gVisor (runsc): candidate code gets a user-space kernel, not the host's
+curl -fsSL https://gvisor.dev/archive.key | gpg --dearmor -o /usr/share/keyrings/gvisor-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main" \
+  > /etc/apt/sources.list.d/gvisor.list
+
+apt-get update
+apt-get install -y docker-ce docker-ce-cli containerd.io runsc unattended-upgrades
+snap install aws-cli --classic
+
+# TLS certificate for the Docker API, from SSM (retry until the role is usable)
+mkdir -p /etc/docker/tls
+for f in ca cert key; do
+  until /snap/bin/aws ssm get-parameter --region ${aws_region} --with-decryption \
+      --name "${ssm_prefix}/sandbox-server/$f" --query Parameter.Value --output text \
+      > /etc/docker/tls/$f.pem; do
+    sleep 5
+  done
+done
+chmod 600 /etc/docker/tls/key.pem
+
+cat > /etc/docker/daemon.json <<'JSON'
+{
+  "hosts": ["unix:///var/run/docker.sock", "tcp://0.0.0.0:2376"],
+  "tlsverify": true,
+  "tlscacert": "/etc/docker/tls/ca.pem",
+  "tlscert": "/etc/docker/tls/cert.pem",
+  "tlskey": "/etc/docker/tls/key.pem",
+  "runtimes": {"runsc": {"path": "/usr/bin/runsc"}},
+  "icc": false,
+  "log-driver": "json-file",
+  "log-opts": {"max-size": "10m", "max-file": "3"}
+}
+JSON
+
+# The packaged unit passes -H fd://, which conflicts with "hosts" above
+mkdir -p /etc/systemd/system/docker.service.d
+cat > /etc/systemd/system/docker.service.d/override.conf <<'CONF'
+[Service]
+ExecStart=
+ExecStart=/usr/bin/dockerd --containerd=/run/containerd/containerd.sock
+CONF
+systemctl daemon-reload
+systemctl restart docker

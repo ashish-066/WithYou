@@ -1,0 +1,920 @@
+/* LiveKit component overrides - must be first */
+@import '@livekit/components-styles';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+/* ==========================================
+   Interview Room Styles
+   ========================================== */
+
+/* Main interview container */
+.interview-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background-color: #000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Main content area - center of screen */
+.main-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  padding-bottom: 100px; /* Space for control bar */
+}
+
+/* ==========================================
+   Avatar Video Styles
+   ========================================== */
+
+.avatar-video-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: min(85vw, 1400px);
+  aspect-ratio: 16/9;
+  border-radius: 16px;
+  overflow: hidden;
+  background-color: #111;
+  transition: box-shadow 0.3s ease;
+}
+
+.avatar-video-wrapper.speaking {
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.3);
+}
+
+.avatar-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-speaking-indicator {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  padding: 8px 16px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 20px;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  animation: pulse-avatar 1.2s ease-in-out infinite;
+}
+
+.pulse-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.pulse-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes pulse-avatar {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* ==========================================
+   Voice Wave Animation (Loading State)
+   ========================================== */
+
+.voice-wave-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.voice-wave {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 180px;
+}
+
+.voice-wave .bar {
+  width: 24px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 100px;
+  animation: wave-animation 1.2s ease-in-out infinite;
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.4),
+              0 0 60px rgba(255, 255, 255, 0.2);
+}
+
+.voice-wave .bar-1 {
+  height: 36px;
+  animation-delay: 0s;
+}
+
+.voice-wave .bar-2 {
+  height: 72px;
+  animation-delay: 0.1s;
+}
+
+.voice-wave .bar-3 {
+  height: 150px;
+  animation-delay: 0.2s;
+}
+
+.voice-wave .bar-4 {
+  height: 120px;
+  animation-delay: 0.3s;
+}
+
+.voice-wave .bar-5 {
+  height: 60px;
+  animation-delay: 0.4s;
+}
+
+@keyframes wave-animation {
+  0%, 100% {
+    transform: scaleY(0.5);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* ==========================================
+   PIP (Picture-in-Picture) Self View
+   ========================================== */
+
+.pip-container {
+  position: absolute;
+  bottom: 120px;
+  right: 24px;
+  width: 180px;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #1a1a1a;
+  border: 2px solid #333;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  z-index: 10;
+}
+
+.pip-container.speaking {
+  border-color: #22c55e;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+}
+
+.pip-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* Mirror effect */
+}
+
+.pip-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #222;
+}
+
+.pip-icon {
+  width: 40px;
+  height: 40px;
+  color: #666;
+}
+
+/* ==========================================
+   Bottom Control Bar
+   ========================================== */
+
+.control-bar {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: rgba(30, 30, 30, 0.95);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+}
+
+.control-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Control Button Group (button + dropdown) */
+.control-button-group {
+  display: flex;
+  align-items: center;
+  background-color: #333;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-right: 8px;
+}
+
+.control-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background-color: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.control-button:hover {
+  background-color: #444;
+}
+
+.control-button.inactive {
+  color: #ff4444;
+}
+
+.control-dropdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 44px;
+  background-color: transparent;
+  border: none;
+  border-left: 1px solid #444;
+  color: #888;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.control-dropdown:hover {
+  background-color: #444;
+}
+
+/* ==========================================
+   End Call Button
+   ========================================== */
+
+.end-call-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background-color: transparent;
+  border: 2px solid #e53935;
+  border-radius: 12px;
+  color: #e53935;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.end-call-button:hover {
+  background-color: #e53935;
+  color: #fff;
+}
+
+.end-call-button svg {
+  flex-shrink: 0;
+}
+
+/* ==========================================
+   Responsive Adjustments
+   ========================================== */
+
+@media (max-width: 768px) {
+  .pip-container {
+    width: 120px;
+    height: 80px;
+    bottom: 100px;
+    right: 16px;
+  }
+
+  .control-bar {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    padding: 8px 12px;
+  }
+
+  .control-button {
+    width: 36px;
+    height: 36px;
+  }
+
+  .control-dropdown {
+    width: 24px;
+    height: 36px;
+  }
+
+  .end-call-button {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+
+  .voice-wave .bar {
+    width: 16px;
+  }
+
+  .voice-wave .bar-1 {
+    height: 24px;
+  }
+
+  .voice-wave .bar-2 {
+    height: 48px;
+  }
+
+  .voice-wave .bar-3 {
+    height: 100px;
+  }
+
+  .voice-wave .bar-4 {
+    height: 80px;
+  }
+
+  .voice-wave .bar-5 {
+    height: 40px;
+  }
+}
+
+/* ==========================================
+   Call Setup Page - Split Screen Layout
+   ========================================== */
+
+.call-setup-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100vw;
+  background-color: #000;
+  overflow: hidden;
+}
+
+/* Left Side - Infinite Scroll Image */
+.call-setup-left {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Infinite Scroll Container */
+.infinite-scroll-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.infinite-scroll-track {
+  display: flex;
+  flex-direction: column;
+  animation: scroll-up 20s linear infinite;
+}
+
+.infinite-scroll-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  flex-shrink: 0;
+}
+
+@keyframes scroll-up {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-33.333%);
+  }
+}
+
+/* Right Side - Form */
+.call-setup-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background-color: #000;
+}
+
+.call-setup-form-wrapper {
+  width: 100%;
+  max-width: 440px;
+}
+
+/* Header */
+.call-setup-header {
+  margin-bottom: 32px;
+}
+
+.call-setup-title {
+  font-size: 2.5rem;
+  font-weight: 400;
+  color: #fff;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.02em;
+}
+
+.call-setup-subtitle {
+  font-size: 1rem;
+  color: #888;
+  margin: 0;
+}
+
+/* Form */
+.call-setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Form Fields */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  color: #aaa;
+  font-weight: 400;
+}
+
+.form-input {
+  width: 100%;
+  padding: 14px 18px;
+  background-color: transparent;
+  border: 1px solid #444;
+  border-radius: 50px;
+  color: #fff;
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
+}
+
+.form-input::placeholder {
+  color: #666;
+}
+
+.form-input:focus {
+  border-color: #888;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+/* Select Dropdown */
+.form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 18px;
+  padding-right: 48px;
+  cursor: pointer;
+}
+
+.form-select option {
+  background-color: #1a1a1a;
+  color: #fff;
+  padding: 12px;
+}
+
+/* Form Row (two columns) */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* File Upload */
+.form-file-upload {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background-color: transparent;
+  border: 1px dashed #444;
+  border-radius: 50px;
+  color: #888;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.form-file-upload:hover {
+  border-color: #666;
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.form-file-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.form-file-name {
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.form-file-placeholder {
+  color: #666;
+}
+
+/* Error Display */
+.form-error {
+  padding: 12px 18px;
+  background-color: rgba(229, 57, 53, 0.1);
+  border: 1px solid rgba(229, 57, 53, 0.3);
+  border-radius: 12px;
+  color: #ff6b6b;
+  font-size: 0.875rem;
+}
+
+/* Interview rules, accepted before starting */
+.interview-rules {
+  padding: 16px 18px;
+  border: 1px solid #333;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.interview-rules-title {
+  margin: 0 0 10px 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #eee;
+}
+
+.interview-rules-list {
+  margin: 0 0 14px 0;
+  padding-left: 18px;
+  list-style: disc;
+  color: #bbb;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.interview-rules-list li + li {
+  margin-top: 6px;
+}
+
+.interview-rules-accept {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: #eee;
+  cursor: pointer;
+}
+
+.interview-rules-accept input {
+  width: 16px;
+  height: 16px;
+}
+
+/* Submit Button */
+.form-submit-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 24px;
+  background-color: #f5f5f5;
+  border: none;
+  border-radius: 50px;
+  color: #000;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  margin-top: 8px;
+}
+
+.form-submit-button:hover:not(:disabled) {
+  background-color: #fff;
+}
+
+.form-submit-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.form-submit-button:disabled {
+  background-color: #333;
+  color: #666;
+  cursor: not-allowed;
+}
+
+/* What to Expect Info Section */
+.call-setup-info {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #222;
+}
+
+.info-title {
+  font-size: 0.875rem;
+  color: #888;
+  font-weight: 400;
+  margin: 0 0 16px 0;
+}
+
+.info-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: #aaa;
+}
+
+.info-check {
+  color: #22c55e;
+  font-size: 1rem;
+}
+
+/* ==========================================
+   Call Setup Responsive Adjustments
+   ========================================== */
+
+@media (max-width: 1024px) {
+  .call-setup-left {
+    flex: 0.8;
+  }
+  
+  .call-setup-right {
+    flex: 1.2;
+  }
+}
+
+@media (max-width: 768px) {
+  .call-setup-container {
+    flex-direction: column;
+  }
+
+  .call-setup-left {
+    display: none; /* Hide infinite scroll on mobile */
+  }
+
+  .call-setup-right {
+    padding: 24px;
+    min-height: 100vh;
+  }
+
+  .call-setup-title {
+    font-size: 2rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-input {
+    padding: 12px 16px;
+  }
+
+  .form-submit-button {
+    padding: 14px 20px;
+  }
+}
+
+/* ==========================================
+   Loading Screen Styles
+   ========================================== */
+
+.loading-screen {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #000;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+}
+
+.loading-text {
+  color: #666;
+  font-size: 1.125rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.loading-dots {
+  display: inline-block;
+  width: 24px;
+  text-align: left;
+}
+
+.loading-dots::after {
+  content: '';
+  animation: loading-dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes loading-dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75%, 100% { content: '...'; }
+}
+
+/* ==========================================
+   Interview Ended Screen Styles
+   ========================================== */
+
+.ended-title {
+  font-size: 2.5rem;
+  font-weight: 400;
+  color: #fff;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.ended-subtitle {
+  font-size: 1.125rem;
+  color: #666;
+  margin: 0 0 40px 0;
+  text-align: center;
+}
+
+.ended-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 40px;
+  background-color: #f5f5f5;
+  border: none;
+  border-radius: 50px;
+  color: #000;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.ended-button:hover {
+  background-color: #fff;
+}
+
+.ended-button:active {
+  transform: scale(0.98);
+}
+
+/* ==========================================
+   Loading Screen Responsive Adjustments
+   ========================================== */
+
+@media (max-width: 768px) {
+  .loading-content {
+    gap: 32px;
+  }
+
+  .loading-text {
+    font-size: 1rem;
+  }
+
+  .ended-title {
+    font-size: 2rem;
+  }
+
+  .ended-subtitle {
+    font-size: 1rem;
+  }
+
+  .ended-button {
+    padding: 14px 32px;
+  }
+}
+
+/* ==========================================
+   Camera warning pop-up (phone or another person detected)
+   ========================================== */
+
+.camera-warning-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.camera-warning {
+  max-width: 440px;
+  width: 100%;
+  padding: 24px;
+  border: 1px solid rgba(229, 57, 53, 0.6);
+  border-radius: 16px;
+  background-color: #16171c;
+  color: #f8fafc;
+}
+
+.camera-warning h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #ff6b6b;
+}
+
+.camera-warning p {
+  margin: 0 0 20px 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+.camera-warning-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  background-color: #f8fafc;
+  color: #0a0b0e;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.camera-warning--neutral {
+  border-color: #333;
+}
+
+.camera-warning--neutral h2 {
+  color: #f8fafc;
+}
+
+.camera-warning-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.camera-warning-button--danger {
+  background-color: #e53935;
+  color: #fff;
+}
+
+.camera-warning-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

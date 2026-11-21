@@ -1,0 +1,70 @@
+# Rendered at container start by the nginx image (envsubst replaces only the
+# variables set in the environment: ${API_UPSTREAM}, ${CSP_CONNECT_SRC}).
+# TLS terminates at the load balancer / CDN in front of this container.
+
+map $uri $alex_cache_control {
+    ~^/assets/  "public, max-age=31536000, immutable";  # hashed file names
+    ~^/api/     "";                                     # the API sets its own
+    default     "no-cache";                             # index.html: always revalidate
+}
+
+server {
+    listen 8080;
+    server_tokens off;
+    root /usr/share/nginx/html;
+
+    # Resume uploads are capped at 5 MB by the API
+    client_max_body_size 6m;
+
+    # Security headers (no add_header inside locations: it would drop these)
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(self), microphone=(self), display-capture=(self), geolocation=(), payment=()" always;
+    # cdn.jsdelivr.net: the code editor (Monaco) loads from it
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' data: https://cdn.jsdelivr.net; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ${CSP_CONNECT_SRC}; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" always;
+    add_header Cache-Control $alex_cache_control always;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Same-origin API: /api/x -> ${API_UPSTREAM}/x (as the Vite dev proxy does)
+    location /api/ {
+        proxy_pass ${API_UPSTREAM}/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
+        # Server-sent events (ops dashboard) must not be buffered
+        proxy_buffering off;
+        proxy_read_timeout 1h;
+    }
+
+    # Public landing page: static files under /landing/, served at "/".
+    # It has its own Content-Security-Policy because the demo form posts to
+    # formsubmit.co (connect-src), which the rest of the app must not allow.
+    # Fonts and scripts are bundled in /landing/, so nothing else is needed.
+    location = / {
+        rewrite ^ /landing/index.html last;
+    }
+    location /landing/ {
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), microphone=(), display-capture=(), geolocation=(), payment=()" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://formsubmit.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://formsubmit.co; object-src 'none'" always;
+        add_header Cache-Control $alex_cache_control always;
+        try_files $uri =404;
+    }
+
+    # Single-page app: unknown paths serve index.html
+    location / {
+        try_files $uri /index.html;
+    }
+}

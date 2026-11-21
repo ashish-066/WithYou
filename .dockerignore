@@ -1,0 +1,27 @@
+# Images are built from the repo root (services share ../shared).
+# Keep secrets, local environments and build output out of every image.
+**/.env
+**/.env.*
+!**/.env.example
+**/.venv
+**/node_modules
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/*.db
+**/tests
+frontend/dist
+desktop
+infra
+deploy
+avatar/KMS
+.git
+.github
+.specstory
+context
+docs
+presentation
+scripts
+README.md
+*.pdf

@@ -1,0 +1,12 @@
+/*
+ * Google Fonts, self-hosted through @fontsource (no request to Google at runtime,
+ * so the CSP stays `font-src 'self'` and it works on locked-down networks).
+ *
+ *   Newsreader      headings, candidate names, report prose
+ *   Instrument Sans interface: nav, tables, forms, buttons
+ *   JetBrains Mono  data: ids, timestamps, scores, code
+ */
+@import '@fontsource-variable/newsreader/opsz.css';
+@import '@fontsource-variable/newsreader/opsz-italic.css';
+@import '@fontsource-variable/instrument-sans/index.css';
+@import '@fontsource-variable/jetbrains-mono/index.css';

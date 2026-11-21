@@ -1,0 +1,88 @@
+/*
+ * Design tokens. Colours are RGB triplets so Tailwind can add opacity
+ * (`bg-accent/10`). Components use the Tailwind names, never raw hex.
+ *
+ * Two areas, two palettes:
+ *   [data-area="app"]       organization workspace, light paper
+ *   [data-area="platform"]  platform console, dark ink
+ * Every text colour below passes WCAG AA (4.5:1) on bg, surface and sunken.
+ *
+ * Rules (enforced by scripts/check-ui-rules.mjs): no gradients, no emoji.
+ */
+
+:root,
+[data-area='app'] {
+  --c-bg: 246 243 236; /* #F6F3EC */
+  --c-surface: 255 255 255;
+  --c-sunken: 239 235 226; /* #EFEBE2 table headers, code */
+  --c-line: 226 220 207; /* #E2DCCF */
+  --c-line-strong: 199 191 175;
+  --c-ink: 28 27 24; /* #1C1B18 */
+  --c-muted: 106 101 91; /* #6A655B */
+  --c-accent: 15 91 76; /* #0F5B4C deep green */
+  --c-on-accent: 255 255 255;
+  --c-good: 31 107 58;
+  --c-warn: 138 90 0;
+  --c-bad: 161 42 34;
+  --c-focus: 15 91 76;
+  color-scheme: light;
+}
+
+[data-area='platform'] {
+  --c-bg: 20 20 15; /* #14140F */
+  --c-surface: 29 29 23;
+  --c-sunken: 16 16 9;
+  --c-line: 52 52 43;
+  --c-line-strong: 78 78 66;
+  --c-ink: 239 237 228;
+  --c-muted: 162 158 144;
+  --c-accent: 217 164 65; /* #D9A441 amber */
+  --c-on-accent: 20 20 15;
+  --c-good: 124 192 143;
+  --c-warn: 224 176 80;
+  --c-bad: 229 120 109;
+  --c-focus: 217 164 65;
+  color-scheme: dark;
+}
+
+/* Area roots paint their own background and text, whatever sits around them. */
+[data-area] {
+  background-color: rgb(var(--c-bg));
+  color: rgb(var(--c-ink));
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+:root {
+  --font-display: 'Newsreader Variable', 'Iowan Old Style', Georgia, serif;
+  --font-ui: 'Instrument Sans Variable', 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace;
+  --radius: 6px;
+  --sidebar: 220px;
+  --content: 1120px;
+}
+
+/* One visible focus ring for every interactive element in the new UI. */
+[data-area] :focus-visible {
+  outline: 2px solid rgb(var(--c-focus));
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+[data-area] ::selection {
+  background: rgb(var(--c-accent) / 0.2);
+}
+
+/* Numbers line up in tables and data. */
+[data-area] .tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-area] * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

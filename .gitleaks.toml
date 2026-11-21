@@ -1,0 +1,7 @@
+# Gitleaks config: default rules plus an allowlist for known placeholders.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholder values in example/docs files"
+regexes = ['''your[_-][a-z0-9_-]*''']

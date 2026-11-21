@@ -1,0 +1,184 @@
+# Full stack in containers: Redis, Postgres, migrations, API, LiveKit agent,
+# brain worker, code sandbox daemon and the frontend.
+#
+#   docker compose up --build        then open http://localhost:8080
+#
+# Secrets come from avatar/.env and worker/.env (same files as local dev);
+# the connection settings below override theirs. Local passwords can be set in
+# a root .env file (REDIS_PASSWORD, POSTGRES_PASSWORD); the defaults are for
+# this machine only. Only the frontend is published, on 127.0.0.1:8080.
+#
+# Don't run this and the host processes (mprocs / `agents.entrypoint dev`) at
+# the same time against one LiveKit project: LiveKit may hand a call to the
+# agent of the other stack, which reads a different Redis.
+# See docs/DEPLOY.md.
+
+name: alex
+
+x-service-env: &service-env
+  REDIS_URL: redis://:${REDIS_PASSWORD:-alex-local-redis}@redis:6379/0
+  DATABASE_URL: postgresql://alex:${POSTGRES_PASSWORD:-alex-local-db}@postgres:5432/alex
+  ENVIRONMENT: ${ENVIRONMENT:-development}
+
+services:
+  redis:
+    image: redis:7.4-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
+    command:
+      - sh
+      - -c
+      - exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes --appendfsync everysec
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-alex-local-redis}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
+    environment:
+      POSTGRES_USER: alex
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-alex-local-db}
+      POSTGRES_DB: alex
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alex -d alex"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # Deploy step: apply database migrations, then exit. Services start after it.
+  migrate:
+    image: alex-api:local
+    build:
+      context: .
+      dockerfile: avatar/Dockerfile
+      target: api
+    command: ["python", "-m", "alex_db.migrate"]
+    environment:
+      <<: *service-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    image: alex-api:local
+    build:
+      context: .
+      dockerfile: avatar/Dockerfile
+      target: api
+    env_file:
+      - path: avatar/.env
+        required: false
+    environment:
+      <<: *service-env
+      # The frontend nginx is the one proxy in front of the API
+      TRUSTED_PROXY_HOPS: "1"
+      CORS_ORIGINS: http://localhost:8080
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  agent:
+    image: alex-agent:local
+    build:
+      context: .
+      dockerfile: avatar/Dockerfile
+      target: agent
+    env_file:
+      - path: avatar/.env
+        required: false
+    environment:
+      <<: *service-env
+      AGENT_DRAIN_TIMEOUT_SECONDS: ${AGENT_DRAIN_TIMEOUT_SECONDS:-3600}
+    # Stopping waits for running interviews (drain). `docker compose kill agent`
+    # ends them at once.
+    stop_grace_period: 3630s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    image: alex-worker:local
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    env_file:
+      - path: worker/.env
+        required: false
+    environment:
+      <<: *service-env
+      SANDBOX_MODE: docker
+      SANDBOX_IMAGE: python:3.12-slim@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159
+      # Candidate code runs on this separate daemon, not on your Docker
+      DOCKER_HOST: tcp://sandbox-docker:2375
+    # Lets a turn in progress finish on stop (worker exits after it)
+    stop_grace_period: 120s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      sandbox-docker:
+        condition: service_healthy
+    networks:
+      - default
+      - sandbox
+    restart: unless-stopped
+
+  # Docker daemon used only for candidate code containers (each runs with
+  # --network none). Reachable only from the worker, on the sandbox network.
+  # Production: a separate, isolated host or node pool instead (docs/DEPLOY.md).
+  sandbox-docker:
+    image: docker:27-dind@sha256:aa3df78ecf320f5fafdce71c659f1629e96e9de0968305fe1de670e0ca9176ce
+    privileged: true
+    environment:
+      # Plain TCP is acceptable only because nothing but the worker can reach it
+      DOCKER_TLS_CERTDIR: ""
+    command: ["--host=tcp://0.0.0.0:2375", "--tls=false"]
+    volumes:
+      - sandbox-docker-data:/var/lib/docker
+    healthcheck:
+      test: ["CMD", "docker", "-H", "tcp://127.0.0.1:2375", "info"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - sandbox
+    restart: unless-stopped
+
+  frontend:
+    image: alex-frontend:local
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    environment:
+      API_UPSTREAM: http://api:8001
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  default: {}
+  sandbox: {}
+
+volumes:
+  redis-data:
+  postgres-data:
+  sandbox-docker-data:

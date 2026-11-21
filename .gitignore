@@ -1,0 +1,31 @@
+.specstory
+# Environment files hold secrets: never commit them anywhere in the repo
+.env
+.env.*
+!.env.example
+
+# Terraform: local state, plans, provider caches and real variable files
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+terraform.tfvars
+
+# Desktop app
+desktop/node_modules/
+desktop/dist/
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Local tooling / OS / caches
+.DS_Store
+.venv/
+node_modules/
+.ruff_cache/
+.pytest_cache/
+*.db
+.claude/settings.local.json
+# Spike outputs (audio files etc.)
+spikes/out/
