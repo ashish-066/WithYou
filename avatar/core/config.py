@@ -20,7 +20,6 @@ PRODUCTION_REQUIRED = (
     "livekit_api_secret",
     "bey_api_key",
     "deepgram_api_key",
-    "cartesia_api_key",
 )
 
 
@@ -82,7 +81,8 @@ class Settings(BaseSettings):
     deepgram_api_key: str = ""  # Optional: uses LiveKit Inference if empty
 
     # TTS Configuration (Cartesia via LiveKit Inference)
-    cartesia_api_key: str = ""  # Optional: uses LiveKit Inference if empty
+    cartesia_api_key: str = ""  # unused (out of credits); kept so existing .env files load
+    deepgram_tts_model: str = "aura-2-thalia-en"
     # Sarvam (Malayalam STT/TTS and the sarvam-105b brain); https://dashboard.sarvam.ai
     sarvam_api_key: str = ""
 

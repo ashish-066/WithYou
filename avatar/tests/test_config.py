@@ -22,11 +22,11 @@ def test_production_with_all_keys_starts():
 
 
 def test_production_names_missing_keys():
-    with pytest.raises(ValueError, match="LIVEKIT_URL, CARTESIA_API_KEY"):
+    with pytest.raises(ValueError, match="LIVEKIT_URL, DEEPGRAM_API_KEY"):
         Settings(
             _env_file=None,
             environment="production",
-            **{**FULL, "livekit_url": "", "cartesia_api_key": ""},
+            **{**FULL, "livekit_url": "", "deepgram_api_key": ""},
         )
 
 

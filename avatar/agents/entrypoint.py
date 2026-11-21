@@ -23,7 +23,6 @@ from core.config import settings
 
 # Set API keys in environment - required for LiveKit plugins
 os.environ["DEEPGRAM_API_KEY"] = settings.deepgram_api_key
-os.environ["CARTESIA_API_KEY"] = settings.cartesia_api_key
 os.environ["BEY_API_KEY"] = settings.bey_api_key
 os.environ["LIVEKIT_URL"] = settings.livekit_url
 os.environ["LIVEKIT_API_KEY"] = settings.livekit_api_key
@@ -41,7 +40,7 @@ from livekit.agents import (
     cli,
 )
 from livekit.agents.worker import ServerEnvOption
-from livekit.plugins import bey, cartesia, deepgram, noise_cancellation, silero
+from livekit.plugins import bey, deepgram, noise_cancellation, silero
 
 from agents.interview_monitor import End, InterviewMonitor, Notify, Say
 from core.redis import get_redis_client
@@ -257,10 +256,8 @@ async def entrypoint(ctx: JobContext) -> None:
                 model="nova-2",
                 language="en",
             ),
-            tts=cartesia.TTS(
-                model="sonic-2",
-                voice="3fffe34e-bcfb-4b71-ba11-ff3aba4d6c6f",  # Chetan - Casual Storyteller
-            ),
+            # Deepgram Aura (Cartesia ran out of credits); Sarvam Bulbul in Phase 2
+            tts=deepgram.TTS(model=settings.deepgram_tts_model),
             vad=ctx.proc.userdata["vad"],
             turn_handling=TURN_HANDLING,
         )
