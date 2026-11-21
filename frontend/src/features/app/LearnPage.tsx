@@ -6,6 +6,7 @@ import { ArrowRight, ChevronLeft, Search } from 'lucide-react';
 import { useStats } from './data';
 import { sessionUrl } from './HomePage';
 import { Scribble } from './notebook';
+import { PagePhoto } from './PagePhoto';
 import { usePrefs } from './prefs';
 import { TOPIC_SUGGESTIONS, strings } from './strings';
 
@@ -54,6 +55,8 @@ export function LearnPage() {
           <ArrowRight size={18} aria-hidden />
         </button>
       </form>
+
+      <PagePhoto />
 
       {mine.length > 0 && (
         <section aria-labelledby="mine-title">

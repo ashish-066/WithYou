@@ -22,6 +22,7 @@ export interface CreateCallRequest {
   language: BuddyLanguage;
   mode: SessionMode;
   topic?: string;
+  page_id?: string;
   voice?: 'kavya' | 'shubh';
 }
 

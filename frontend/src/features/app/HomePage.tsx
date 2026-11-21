@@ -15,9 +15,10 @@ import { MarginNote, Scribble, SpeechBubble } from './notebook';
 import { usePrefs } from './prefs';
 import { TOPIC_SUGGESTIONS, partOfDay, strings } from './strings';
 
-export function sessionUrl(mode: 'study' | 'talk', topic?: string) {
+export function sessionUrl(mode: 'study' | 'talk', topic?: string, pageId?: string) {
   const q = new URLSearchParams({ mode });
   if (topic) q.set('topic', topic);
+  if (pageId) q.set('page', pageId);
   return `/session?${q.toString()}`;
 }
 

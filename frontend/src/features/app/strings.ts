@@ -65,6 +65,7 @@ export type Strings = {
   privateNote: string;
   helpNudge: string;
   heroAsk: string;
+  page: { title: string; body: string; take: string; reading: string; found: string; start: string; retake: string };
   streakLine: (days: number, week: number, concepts: number) => string;
   noteNext: string;
 };
@@ -130,6 +131,15 @@ const en: Strings = {
   learningTitle: 'Learning level',
   privateNote: "Only you can see this. It's your buddy's gentle read, not a diagnosis.",
   heroAsk: 'What shall we do today?',
+  page: {
+    title: 'Study a page from your book',
+    body: "Take a photo of a textbook page. I'll read it and we'll go through it together.",
+    take: 'Take a photo',
+    reading: 'Reading your page…',
+    found: 'What this page is about',
+    start: 'Study this page',
+    retake: 'Another photo',
+  },
   streakLine: (d, w, c) => `${d} day${d === 1 ? '' : 's'} in a row · ${w} this week · ${c} concepts`,
   noteNext: 'note to self',
   helpNudge: 'Some days have felt really heavy. You are not alone: talk to someone you trust, or call Tele-MANAS 14416.',
@@ -208,6 +218,15 @@ const te: Strings = {
   learningTitle: 'నేర్చుకునే స్థాయి',
   privateNote: 'ఇది నీకు మాత్రమే కనిపిస్తుంది. ఇది నీ బడ్డీ అభిప్రాయం మాత్రమే, డయాగ్నోసిస్ కాదు.',
   heroAsk: 'ఈ రోజు ఏం చేద్దాం?',
+  page: {
+    title: 'నీ బుక్ లోని పేజీ చదువుదాం',
+    body: 'టెక్స్ట్ బుక్ పేజీ ఫోటో తీయి. నేను చదివి, మనిద్దరం కలిసి అర్థం చేసుకుందాం.',
+    take: 'ఫోటో తీయి',
+    reading: 'నీ పేజీ చదువుతున్నా…',
+    found: 'ఈ పేజీలో ఏముంది',
+    start: 'ఈ పేజీ చదువుదాం',
+    retake: 'ఇంకో ఫోటో',
+  },
   streakLine: (d, w, c) => `వరుసగా ${d} రోజులు · ఈ వారం ${w} · ${c} కాన్సెప్ట్స్`,
   noteNext: 'గుర్తుంచుకో',
   helpNudge: 'కొన్ని రోజులు చాలా భారంగా అనిపించాయి. నువ్వు ఒంటరివి కాదు: నమ్మే వాళ్ళతో మాట్లాడు, లేదా Tele-MANAS 14416 కి కాల్ చేయి.',
@@ -286,6 +305,15 @@ const ml: Strings = {
   learningTitle: 'പഠന നില',
   privateNote: 'ഇത് നിനക്ക് മാത്രമേ കാണാനാകൂ. ഇത് കൂട്ടുകാരന്റെ ഒരു തോന്നൽ മാത്രം, രോഗനിർണയമല്ല.',
   heroAsk: 'ഇന്ന് എന്താ ചെയ്യേണ്ടത്?',
+  page: {
+    title: 'നിന്റെ പുസ്തകത്തിലെ ഒരു പേജ് പഠിക്കാം',
+    body: 'ടെക്സ്റ്റ്ബുക്ക് പേജിന്റെ ഫോട്ടോ എടുക്ക്. ഞാൻ വായിച്ചിട്ട് നമുക്ക് ഒരുമിച്ച് പഠിക്കാം.',
+    take: 'ഫോട്ടോ എടുക്ക്',
+    reading: 'നിന്റെ പേജ് വായിക്കുന്നു…',
+    found: 'ഈ പേജിൽ എന്താണ്',
+    start: 'ഈ പേജ് പഠിക്കാം',
+    retake: 'വേറൊരു ഫോട്ടോ',
+  },
   streakLine: (d, w, c) => `തുടർച്ചയായി ${d} ദിവസം · ഈ ആഴ്ച ${w} · ${c} കൺസെപ്റ്റുകൾ`,
   noteNext: 'ഓർമ്മയ്ക്ക്',
   helpNudge: 'ചില ദിവസങ്ങൾ വല്ലാതെ ഭാരമുള്ളതായി തോന്നി. നീ ഒറ്റയ്ക്കല്ല: വിശ്വസിക്കുന്ന ആരോടെങ്കിലും സംസാരിക്കൂ, അല്ലെങ്കിൽ Tele-MANAS 14416 ൽ വിളിക്കൂ.',

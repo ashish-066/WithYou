@@ -27,6 +27,22 @@ export async function createCall(request: CreateCallRequest): Promise<CallRespon
   return response.json();
 }
 
+export type ReadPage = { page_id: string; topic: string; points: string[]; summary: string };
+
+/** Read a photographed textbook page (data URL); the buddy then teaches from it. */
+export async function readPage(image: string, language: string): Promise<ReadPage> {
+  const response = await fetch(`${API_BASE}/pages/read`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image, language }),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: '' }));
+    throw new Error(typeof error.detail === 'string' && error.detail ? error.detail : `Couldn't read the page (${response.status})`);
+  }
+  return response.json();
+}
+
 /**
  * End an active call.
  */

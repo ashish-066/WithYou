@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from alex_db.audit import record
 from fastapi import APIRouter, Depends, HTTPException
 
+from api.page_routes import load_page
 from api.schemas import (
     CallResponse,
     CallStatusResponse,
@@ -55,6 +56,9 @@ async def create_call(request: CreateCallRequest, user: User = Depends(require_u
 
     logger.info(f"Creating call {call_id} for session {session_id}")
     topic = (request.topic or "").strip() or None
+    page = await load_page(user.user_id, request.page_id) if request.page_id and request.mode == "study" else None
+    if page:
+        topic = page["topic"]
     await AuthStore().create_interview(
         session_id, user.org_id, candidate_name=name, user_id=user.user_id,
         interview_mode=request.mode, language=request.language, topic=topic,
@@ -94,6 +98,7 @@ async def create_call(request: CreateCallRequest, user: User = Depends(require_u
                     "language": request.language,
                     "mode": request.mode,
                     **({"topic": topic} if topic else {}),
+                    **({"page": json.dumps(page, ensure_ascii=False)} if page else {}),
                 },
             )
         finally:

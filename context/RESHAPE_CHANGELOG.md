@@ -328,3 +328,10 @@ Next:
 - notebook-style Home (speech-bubble greeting, sticky-note "next time", margin-note streak), diary-style History, hand-plotted Insights, a notebook login
 - screenshots, then commit
 - Phase 8 done: buddy character (`features/app/Buddy.tsx`: happy, listening, thinking, speaking, caring, wave) on Login, Home, the session screens (its face follows the voice state instead of the orb) and the desktop rail; notebook primitives (`features/app/notebook.tsx`: SpeechBubble, StickyNote with tape, Scribble underline, MarginNote); paper + margin line on every screen; drawn boxes and buttons on Learn, History, Insights, Profile, the recap ("next time" is a sticky note). Build and UI rules pass; checked by screenshots at 390×844.
+
+## Feature: study a page from your textbook (photo)
+- Learn → "Study a page from your book" → camera. The phone shrinks the photo (max 1600 px JPEG) and sends it to `POST /api/pages/read` (`avatar/api/page_routes.py`).
+- Gemini reads the page: topic, 2–4 key ideas and a one-line summary in the chosen language, plus the page text. `gemini-3.5-flash-lite` (~2 s), backup `gemini-3.1-flash-lite`; `gemini-3.8-flash` took over 40 s or returned 503, so it isn't used. Non-study photos get a friendly "try a clearer photo".
+- The page is kept in Redis for 24 h under `page:{user}:{id}`, readable only by its owner. `POST /calls/` with `page_id` sends it in `system_init`; the worker uses the page's ideas as the session plan (no planning call) and puts the page text in the buddy's prompt ("your book says…").
+- Config: `GOOGLE_API_KEY` added to `avatar/.env` (same key as the worker), `PAGE_MODELS`.
+- Tested: unit tests (worker 138, API 69 passing); live Gemini read in Telugu and Malayalam; end-to-end upload in the app (screenshots). Not yet tested: a full voice session started from a page.

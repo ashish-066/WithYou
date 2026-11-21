@@ -18,6 +18,7 @@ interface UseInterviewCallReturn {
     mode: SessionMode,
     topic?: string,
     voice?: 'kavya' | 'shubh',
+    pageId?: string,
   ) => Promise<void>;
   endCurrentCall: () => Promise<void>;
 }
@@ -29,11 +30,11 @@ export function useInterviewCall(): UseInterviewCallReturn {
   const [endedSessionId, setEndedSessionId] = useState<string | null>(null);
 
   const startCall = useCallback(
-    async (learnerName: string, language: BuddyLanguage, mode: SessionMode, topic?: string, voice?: 'kavya' | 'shubh') => {
+    async (learnerName: string, language: BuddyLanguage, mode: SessionMode, topic?: string, voice?: 'kavya' | 'shubh', pageId?: string) => {
     setState('connecting');
     setError(null);
     try {
-      const response = await createCall({ candidate_name: learnerName, language, mode, topic, voice });
+      const response = await createCall({ candidate_name: learnerName, language, mode, topic, voice, page_id: pageId });
       setCallData(response);
       setState('connected');
     } catch (err) {

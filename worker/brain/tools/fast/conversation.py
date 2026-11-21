@@ -146,6 +146,18 @@ def language_rule(state: InterviewState) -> str:
     return LANGUAGE_RULES.get(lang, LANGUAGE_RULES["ml-IN"]) + SWITCH_RULE
 
 
+def page_block(state: InterviewState) -> str:
+    """The textbook page the learner photographed: teach from it, in their words."""
+    text = (state.get("page_text") or "").strip()
+    if not text:
+        return ""
+    return (
+        "\n\nThe learner photographed this page from their textbook. Teach from it, use its "
+        "examples, and say things like 'your book says...'. Don't read it out word for word.\n"
+        f"<textbook_page>\n{text}\n</textbook_page>"
+    )
+
+
 def session_memory(state: InterviewState) -> str:
     """What the learner found hard earlier this session, and whether it has clicked."""
     points = (state.get("understanding") or {}).get("points") or []
@@ -220,7 +232,7 @@ async def conversation_tool(
             skill_guidance=skill_guidance,
             user_message=input_data.user_message,
             interviewer_instruction=state.get("interviewer_instruction") or "None",
-            session_memory=session_memory(state),
+            session_memory=session_memory(state) + page_block(state),
             mood=state.get("mood") or "Not shared.",
             mode=turn_mode(state),
             coach_rules=COACH_RULES,

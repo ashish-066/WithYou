@@ -299,6 +299,7 @@ class InterviewState(TypedDict, total=False):
     # Interview Progress
     # =========================================================================
     current_topic: str
+    page_text: str  # a photographed textbook page (study from a page)
     # Language the buddy speaks now: ml-IN | te-IN | en-IN (follows the learner)
     language: str
     # "study" (default) or "talk" (Just talk: emotional buddy, brain/talk.py)

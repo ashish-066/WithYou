@@ -22,6 +22,7 @@ export function StudyPage() {
   const [params] = useSearchParams();
   const mode: SessionMode = params.get('mode') === 'talk' ? 'talk' : 'study';
   const topic = params.get('topic')?.trim() || undefined;
+  const pageId = params.get('page') || undefined;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { state, callData, error, endedSessionId, startCall, endCurrentCall } = useInterviewCall();
@@ -30,7 +31,7 @@ export function StudyPage() {
   const t = labels(language);
   const started = useRef(false);
 
-  const start = () => startCall(user?.name || 'Learner', language, mode, topic, voice);
+  const start = () => startCall(user?.name || 'Learner', language, mode, topic, voice, pageId);
 
   useEffect(() => {
     if (started.current) return;

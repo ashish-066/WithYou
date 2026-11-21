@@ -20,6 +20,7 @@ PRODUCTION_REQUIRED = (
     "livekit_api_secret",
     "bey_api_key",
     "sarvam_api_key",
+    "google_api_key",
 )
 
 
@@ -100,6 +101,9 @@ class Settings(BaseSettings):
     interrupt_min_words: int = 3
     # Sarvam (Malayalam STT/TTS and the sarvam-105b brain); https://dashboard.sarvam.ai
     sarvam_api_key: str = ""
+    # Gemini reads photos of textbook pages (same key as the brain worker)
+    google_api_key: str = ""
+    page_models: str = "gemini-3.5-flash-lite,gemini-3.1-flash-lite"  # tried in order
 
     # Agent Configuration
     agent_name: str = "Study Buddy"

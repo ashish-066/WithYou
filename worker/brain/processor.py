@@ -129,7 +129,15 @@ class MessageProcessor:
                 topic = str(raw_data.get("topic") or "").strip()
                 if topic and talk.is_talk(state):
                     state["mood"] = topic[:120]  # how they said they feel (mood chip)
-                if topic and not talk.is_talk(state):
+                page = _page(raw_data.get("page"))
+                if topic and not talk.is_talk(state) and page:
+                    # A photographed textbook page: its key ideas are the plan
+                    state["current_topic"] = topic
+                    state["page_text"] = page.get("page_text", "")[:1500]
+                    state["understanding"] = understanding.new_map(
+                        topic, state.get("language") or "en-IN", [str(p) for p in page["points"]][:4]
+                    )
+                elif topic and not talk.is_talk(state):
                     state["current_topic"] = topic
                     try:
                         points = await asyncio.wait_for(
@@ -442,3 +450,18 @@ class MessageProcessor:
         if deleted:
             logger.info(f"Ended and cleaned up session {session_id}")
         return deleted
+
+
+def _page(raw: object) -> dict | None:
+    """The textbook page sent with system_init (JSON), if it's usable."""
+    import json
+
+    if not raw:
+        return None
+    try:
+        page = json.loads(raw) if isinstance(raw, str) else raw
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(page, dict) or not page.get("points"):
+        return None
+    return page
