@@ -16,7 +16,7 @@ export function SpeechBubble({ children, className }: { children: ReactNode; cla
     <div className={cx('relative', className)}>
       <div className="sketch relative bg-surface px-4 py-3 text-lead text-ink">{children}</div>
       {/* tail, pointing down-left at the buddy */}
-      <svg aria-hidden width="28" height="20" viewBox="0 0 28 20" className="absolute -bottom-[17px] left-8">
+      <svg aria-hidden width="28" height="20" viewBox="0 0 28 20" className="absolute -bottom-[17px] left-8" style={{ strokeWidth: 1.5 }}>
         <path d="M2 1 C6 8 4 14 1 19 C9 15 16 9 20 1" style={{ fill: 'rgb(var(--c-surface))' }} />
         <path
           d="M2 1 C6 8 4 14 1 19 C9 15 16 9 20 1"
@@ -55,8 +55,8 @@ export function Scribble({ children, color = 'turmeric', className }: { children
         className="absolute -bottom-1 left-0 z-0 h-3 w-full"
       >
         <path
-          d="M2 8 C40 3 70 10 105 6 C140 2 170 9 198 5"
-          style={{ fill: 'none', stroke: `rgb(var(--c-${color}))`, strokeWidth: 5, strokeLinecap: 'round', opacity: 0.85 }}
+          d="M2 7 C50 5 120 6 198 5"
+          style={{ fill: 'none', stroke: `rgb(var(--c-${color}))`, strokeWidth: 3.5, strokeLinecap: 'round', opacity: 0.8 }}
         />
       </svg>
     </span>
@@ -64,7 +64,7 @@ export function Scribble({ children, color = 'turmeric', className }: { children
 }
 
 export function MarginNote({ children, className }: { children: ReactNode; className?: string }) {
-  return <p className={cx('font-hand text-lead text-terracotta', className)}>{children}</p>;
+  return <p className={cx('text-body font-medium text-muted', className)}>{children}</p>;
 }
 
 export function SketchButton({

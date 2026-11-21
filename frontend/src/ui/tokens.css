@@ -121,20 +121,21 @@
 /* Ruled notebook paper with a margin line (SVG pattern: the UI rules forbid CSS gradients) */
 [data-area='notebook'] .paper {
   background-color: rgb(var(--c-bg));
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='34'%3E%3Cline x1='0' y1='33.5' x2='8' y2='33.5' stroke='%23DECFB2' stroke-width='1'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='34'%3E%3Cline x1='0' y1='33.5' x2='8' y2='33.5' stroke='%23E9DFCA' stroke-width='1'/%3E%3C/svg%3E");
 }
 [data-area='notebook'] .margin-line {
-  box-shadow: inset 2px 0 0 0 rgb(var(--c-margin) / 0.55);
+  box-shadow: inset 1.5px 0 0 0 rgb(var(--c-margin) / 0.35);
 }
 
 /* Hand-drawn boxes: uneven corners read as drawn, not generated */
 [data-area='notebook'] .sketch {
-  border: 2px solid rgb(var(--c-ink) / 0.82);
-  border-radius: 255px 14px 225px 14px / 14px 225px 14px 255px;
+  border: 1.5px solid rgb(var(--c-ink) / 0.78);
+  border-radius: 18px;
+  box-shadow: 0 1px 0 rgb(var(--c-ink) / 0.06), 0 6px 18px -12px rgb(var(--c-ink) / 0.35);
 }
 [data-area='notebook'] .sketch-soft {
-  border: 1.5px solid rgb(var(--c-ink) / 0.35);
-  border-radius: 14px 225px 14px 255px / 255px 14px 225px 14px;
+  border: 1px solid rgb(var(--c-line-strong));
+  border-radius: 16px;
 }
 [data-area='notebook'] .sticky {
   background: rgb(var(--c-turmeric-soft));

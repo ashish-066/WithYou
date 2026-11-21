@@ -61,7 +61,7 @@ export function HomePage() {
         <Link
           to="/me"
           aria-label={t.nav.profile}
-          className="sketch flex h-11 w-11 items-center justify-center bg-turmeric-soft font-display text-lead font-bold text-ink"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-accent font-display text-lead font-bold text-accent-on"
         >
           {(firstName[0] || 'S').toUpperCase()}
         </Link>
