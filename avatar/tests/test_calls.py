@@ -77,3 +77,28 @@ async def test_no_recording_is_started(client):
     _, call = await start_call(client)
     row = await interview(call["session_id"])
     assert not row.recording_key and not row.egress_id
+
+
+async def test_progress_shows_topic_and_ideas_to_the_owner_only(client, redis):
+    import json
+
+    from api_helpers import fresh_client
+
+    _, call = await start_call(client)
+    sid = call["session_id"]
+    assert (await client.get(f"/calls/{call['call_id']}/progress")).json() == {
+        "topic": None, "language": "ml-IN", "ideas": [], "covered": 0,
+    }
+    understanding = {"topic": "photosynthesis", "points": [
+        {"id": "p1", "text": "Plants make food from sunlight", "status": "understood", "evidence": "x"},
+        {"id": "p2", "text": "Chlorophyll is green", "status": "partial", "evidence": ""},
+    ]}
+    await redis.hset(f"context:{sid}", mapping={
+        "current_topic": "photosynthesis", "language": "te-IN", "understanding": json.dumps(understanding),
+    })
+    body = (await client.get(f"/calls/{call['call_id']}/progress")).json()
+    assert body["topic"] == "photosynthesis" and body["language"] == "te-IN" and body["covered"] == 1
+    assert body["ideas"][1] == {"text": "Chlorophyll is green", "status": "partial"}  # no evidence/scores
+    async with fresh_client(client) as other:
+        await signup(other, org="Globex", email="b@globex.test")
+        assert (await other.get(f"/calls/{call['call_id']}/progress")).status_code == 404

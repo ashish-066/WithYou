@@ -58,6 +58,22 @@ export async function getCallStatus(callId: string): Promise<{
   return response.json();
 }
 
+export interface Progress {
+  topic: string | null;
+  language: string | null;
+  ideas: { text: string; status: 'unseen' | 'partial' | 'gap' | 'understood' }[];
+  covered: number;
+}
+
+/**
+ * What the learner has covered: topic + key ideas (from the brain's understanding map).
+ */
+export async function getProgress(callId: string): Promise<Progress> {
+  const response = await fetch(`${API_BASE}/calls/${callId}/progress`);
+  if (!response.ok) throw new Error(`Failed to get progress: ${response.status}`);
+  return response.json();
+}
+
 /**
  * Health check for the API.
  */

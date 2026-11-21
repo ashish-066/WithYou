@@ -4,6 +4,7 @@ A signed-in learner starts a call; the voice agent joins the LiveKit room and
 relays turns to the brain worker over Redis.
 """
 
+import json
 import logging
 import uuid
 from datetime import UTC, datetime
@@ -126,6 +127,42 @@ async def get_call_status(call_id: str, user: User = Depends(require_user)) -> C
         participant_count=participant_count,
         created_at=call.get("created_at"),
     )
+
+
+@router.get("/{call_id}/progress")
+async def get_progress(call_id: str, user: User = Depends(require_user)) -> dict:
+    """What the learner has covered so far: the topic and its key ideas.
+
+    Read from the brain's session state in Redis (worker brain/understanding.py).
+    Ideas carry only a status for the learner's screen; no scores.
+    """
+    call = await active_calls.get(call_id)
+    if call is None:
+        raise HTTPException(status_code=404, detail="Call not found")
+    session_id = call["session_id"]
+    await ensure_session_user_access(session_id, user)
+
+    redis = get_redis_client()
+    try:
+        topic, language, raw = await redis.hmget(
+            f"{settings.context_prefix}:{session_id}", "current_topic", "language", "understanding"
+        )
+    finally:
+        await redis.aclose()
+    try:
+        understanding = json.loads(raw) if raw else {}
+    except ValueError:
+        understanding = {}
+    ideas = [
+        {"text": p.get("text", ""), "status": p.get("status", "unseen")}
+        for p in understanding.get("points") or []
+    ]
+    return {
+        "topic": understanding.get("topic") or (topic if topic and topic != "not chosen yet" else None),
+        "language": language or call.get("language"),
+        "ideas": ideas,
+        "covered": sum(1 for i in ideas if i["status"] == "understood"),
+    }
 
 
 @router.delete("/{call_id}", response_model=EndCallResponse)

@@ -8,7 +8,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { AuthProvider, RequireAuth } from './hooks/useAuth';
-import { InterviewPage } from './pages/InterviewPage';
+import { StudyPage } from './features/study/StudyPage';
 import { LoginPage } from './pages/LoginPage';
 import { Home, NotFound } from './areas/shared/routing';
 
@@ -23,7 +23,7 @@ export default function App() {
           path="/study"
           element={
             <RequireAuth>
-              <InterviewPage />
+              <StudyPage />
             </RequireAuth>
           }
         />

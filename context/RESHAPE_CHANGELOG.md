@@ -175,3 +175,31 @@ Ashish is away and asked me to keep going phase by phase and test everything tog
   - processor round trip through Redis
   - **Worker 112 passed.**
 - **Real-brain loops (English and Telugu):** teach → quiz → half-right ("You're close!… green helper…" / "…కరెక్ట్! కానీ…") → vague (one follow-up / "కంగారు పడకు") → correct (marked understood with the learner's quote → moves on to the next idea).
+
+## Phase 4: Mobile-first PWA ✅ (automated + phone-size screenshots); phone test batched
+- **One learner screen** (`frontend/src/features/study/`): `StudyPage` (start: greeting, language picker, big Start, which is also the user gesture browsers need for audio) → `StudyRoom`. The room has:
+  - **top:** topic + "what we've covered" chips, one per key idea from the Phase 3 map, filled when understood
+  - **middle:** avatar video if present, otherwise a state orb (listening / thinking / speaking via `useVoiceAssistant`) and the live transcript (`useTranscriptions`; learner right, buddy left)
+  - **bottom:** language pills (switch mid-session) and a big mic button
+  - an End button with a confirmation; `StartAudio` fallback if autoplay is blocked
+  - all UI labels in Malayalam / Telugu / English, following the session language (and the brain's spoken switches)
+  - layout uses `100dvh` + safe-area insets
+  - Removed the old `InterviewPage`, `InterviewRoom` and `ConfirmEndDialog`
+- **API:** `GET /calls/{call_id}/progress` → `{topic, language, ideas: [{text, status}], covered}` from the brain's Redis state; owner-only; no scores or evidence. Test added (avatar **57 passed**).
+- **PWA:**
+  - `manifest.webmanifest` (name "പഠിപ്പ് കൂട്ടുകാരൻ · Study Buddy", start `/study`, standalone, theme #0F5B4C)
+  - icons 192/512 + maskable + apple-touch (generated open-book icon)
+  - `sw.js` caches **nothing live**: navigation-only offline fallback; API, WebRTC and assets always come from the network
+  - iOS meta tags; registration in `main.tsx`
+  - `npm run check:pwa`: installability check on `dist/` (manifest, icons, SW + fetch handler, registration). Lighthouse isn't installed and removed its PWA audit.
+- **Cleanup:** removed the Presence View marketing landing page (`public/landing`, nginx rules). nginx CSP no longer allows the Monaco CDN; camera permission off.
+- **Phone access:** `npm run dev:phone` (LAN) and Vite allows `*.trycloudflare.com`, so `cloudflared tunnel --url http://localhost:3000` gives the HTTPS a phone needs for the mic.
+- **Screenshots at 390×844** (headless Chrome, real session): start screen and room render correctly in Telugu, with nothing cut off.
+
+### ⚠️ Found while testing: this network breaks LiveKit (demo risk)
+- During the Phase 4 run the agent (and a bare `rtc.Room().connect()` with no app code) **timed out joining rooms**, while LiveKit's REST API, the `/rtc` handshake via curl and token validation all worked.
+- **Cause:** the laptop is on an **IPv6-only NAT64 network** (DNS returns `64:ff9b::…`; no Wi-Fi association, so likely a phone hotspot). `curl -6` to LiveKit times out; `curl -4` works in 0.8 s. LiveKit's native SDK tries the IPv6 address and doesn't fall back.
+- **Not an app bug,** but **the plan's "demo on your own hotspot" fallback can hit exactly this.** Options for Ashish:
+  - use normal Wi-Fi (IPv4) for the laptop
+  - or turn IPv6 off on that interface while demoing (`networksetup -setv6off "<service>"`, back with `-setv6automatic`)
+  - or host the agent somewhere with IPv4
