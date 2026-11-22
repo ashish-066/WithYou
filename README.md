@@ -1,7 +1,7 @@
 # WithYou
 
-**A companion that stays with you, in your own language.**
-It talks with you when the day is heavy, sits with you when you study, remembers how you've been, and notices, quietly, when you're not okay.
+**A companion you can see, hear and talk to face to face, in your own language.**
+You open WithYou and you're on a video call with someone who looks at you, listens, and answers in Malayalam, Telugu, Tamil, Hindi or English. It talks with you when the day is heavy, sits with you when you study, remembers how you've been, and notices, quietly, when you're not okay.
 
 Malayalam · Telugu · Tamil · Hindi · English &nbsp;|&nbsp; Live: **https://13.205.190.12.sslip.io** &nbsp;|&nbsp; Demo login: `demo.learner@studybuddy.local` / `demo-password-123`
 
@@ -13,9 +13,11 @@ It's late. The house is asleep. A seventeen-year-old lies awake with a feeling s
 
 Tomorrow she'll still have a chapter she doesn't understand and a test she's dreading. But tonight what she needs is simpler: someone who answers when she talks, in the language she feels in, who doesn't judge, doesn't lecture, doesn't rush to fix her, and who'll still be there in the morning when she says *"okay, can you help me with this chapter?"*
 
-That's WithYou. Not an app you open for one job: a companion that's **with you** through the whole of it, the studying and the stress and the ordinary days in between.
+That's WithYou. Not a chat window and not an app you open for one job: **a face across the table**, on a video call, that's with you through the whole of it, the studying and the stress and the ordinary days in between.
 
-## See it
+## Meet WithYou, face to face
+
+This is what opening WithYou feels like: a video call with a real-looking person who greets you, listens, waits while you find your words, and talks back in your language with live captions underneath.
 
 <p align="center">
   <a href="assets/withyou-demo.mp4"><img src="assets/avatar.jpeg" width="280" alt="WithYou on a video call: 'Hey, I'm here. How's your day going? Tell me anything, I'm listening.'"></a>
@@ -54,7 +56,9 @@ That's WithYou. Not an app you open for one job: a companion that's **with you**
 
 ## What WithYou is
 
-You open it and **talk**, out loud, in your own language, the way you'd talk to someone who knows you. It talks back in a warm, natural voice (or as a person on a video call), and it remembers.
+You open it and you're **on a video call**. A person's face looks back at you, nods along while you speak, and answers in a warm, natural voice in your own language, with live captions underneath. You talk out loud, the way you'd talk to someone who knows you, and it remembers.
+
+That's the heart of WithYou: **it doesn't feel like using an app, it feels like talking to someone.** Text chatbots ask you to type your feelings into a box. WithYou gives you a face to talk to, which is what people actually reach for when they're struggling, and what makes learning stick when you're stuck.
 
 ### It listens when you just need to talk
 Tap *"How are you feeling?"* (stressed, worried about exams, bored, tired, happy) or just start talking. WithYou becomes a listener: it doesn't steer you back to work, doesn't diagnose, doesn't hand you a list of tips. It asks what happened and waits for the answer. Informal, the way a friend speaks (നീ / నువ్వు / நீ / तुम, never the distant formal "you"), and it never pretends to be more than it is.
@@ -84,7 +88,7 @@ Plenty of apps will chat with you. A companion is something else: it has **memor
 
 | A typical AI "friend" chatbot | WithYou |
 |---|---|
-| A text box, English-first | **Voice-first**, in five Indian languages, switching mid-conversation |
+| A text box, English-first | **A face-to-face video call**: a human face, a real voice, live captions, in five Indian languages |
 | Forgets you when the chat ends | **Remembers**: your history, how you've been feeling, what you're working on |
 | Agrees with everything, keeps you hooked | Honest and bounded: says it's not a counsellor, points you to real people |
 | Safety depends on the model's mood | **Deterministic crisis detection** in every language, with real Indian helplines |
@@ -98,7 +102,7 @@ Plenty of apps will chat with you. A companion is something else: it has **memor
 - **It hears you correctly.** Automatic language detection misheard Telugu as Kannada in real testing, so listening is locked to your language and switched only when you ask.
 - **It answers quickly.** Replies are sent as soon as they're ready; anything slower (like updating what you've understood) happens afterwards, so a conversation never stalls.
 - **It works on the phone you have.** Installable from the browser, mobile-first, no app store.
-- **It has a face, if you want one.** With a video avatar, WithYou appears as a person on a call; otherwise an animated companion whose face shows it's listening, thinking or speaking. If the video service fails, the conversation simply carries on by voice.
+- **It looks you in the eye.** WithYou appears as a person on a video call (a lifelike real-time avatar, lip-synced to its voice), with live captions so you can follow every word. If the video service is ever unavailable, the call carries on with an animated companion whose face shows it's listening, thinking or speaking; it never just drops you.
 
 ## How it works
 
@@ -118,19 +122,19 @@ flowchart LR
     API --> DB[(Postgres)]
     API --> R[(Redis)]
     W --> R
-    A -. optional .-> BP[BeyondPresence<br/>video avatar]
+    A -- face on the call --> BP[BeyondPresence<br/>real-time video avatar]
 ```
 
 | Part | What it does | Code |
 |---|---|---|
-| **Voice agent** | Joins the call, listens (Saaras) and speaks (Bulbul), follows language switches, gentle silence nudges, video avatar with voice-only fallback | `avatar/agents/` |
+| **Video-call agent** | Joins the call as the companion: brings the lifelike video face (BeyondPresence), listens (Saaras) and speaks (Bulbul), follows language switches, gentle silence nudges, falls back to the animated companion if video fails | `avatar/agents/` |
 | **Companion brain** | Understands each turn, chooses how to respond (listen, chat, explain, check, coach, be taught), writes the reply, then updates its memory; writes the recap with a mood read | `worker/brain/` |
 | **Listening + safety** | The "just talk" persona; crisis phrases in five languages and the safety response that overrides everything | `worker/brain/talk.py` |
 | **Understanding map** | Key concepts of a topic, assessed only with quoted evidence from the learner | `worker/brain/understanding.py` |
 | **API** | Accounts, history, insights (streak, mood timeline, learning levels), personal suggestions, translation of past conversations into today's language, textbook-page reading | `avatar/api/` |
 | **App** | Home (talk or study), Learn, live conversation, recap, History, Insights, Profile, in five languages | `frontend/src/features/` |
 
-**Stack:** Python, FastAPI, LangGraph, LiveKit Agents, Redis Streams, PostgreSQL + Alembic, React 18 + TypeScript + Vite + Tailwind. **AI:** Sarvam (Saaras STT, Bulbul v3 TTS, Sarvam-105B, Sarvam Translate) first, because it was built for Indian languages; Google Gemini as fallback and for reading textbook pages; BeyondPresence for the optional video avatar.
+**Stack:** Python, FastAPI, LangGraph, LiveKit Agents, Redis Streams, PostgreSQL + Alembic, React 18 + TypeScript + Vite + Tailwind. **AI:** Sarvam (Saaras STT, Bulbul v3 TTS, Sarvam-105B, Sarvam Translate) first, because it was built for Indian languages; Google Gemini as fallback and for reading textbook pages; BeyondPresence for the real-time video face.
 
 ### Decisions that matter
 
