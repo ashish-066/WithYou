@@ -21,12 +21,6 @@ That's WithYou. Not a chat window and not an app you open for one job: **a face 
 
 This is what opening WithYou feels like: a video call with a real-looking person who greets you, listens, waits while you find your words, and talks back in your language with live captions underneath.
 
-<p align="center">
-  <a href="https://13.205.190.12.sslip.io/demo"><img src="assets/avatar.jpeg" width="280" alt="WithYou on a video call: 'Hey, I'm here. How's your day going? Tell me anything, I'm listening.'"></a>
-  <br>
-  <b><a href="https://13.205.190.12.sslip.io/demo">▶ Click here to watch the demo video</a></b><br><sub>Recorded on a phone, the whole app end to end. <a href="assets/withyou-demo.mp4">Backup copy in this repo</a>.</sub>
-</p>
-
 <table>
   <tr>
     <td align="center" width="33%"><img src="assets/homescreen-1.jpeg" width="230" alt="Home screen"><br><sub><b>Home.</b> Your companion greets you, remembers your streak, and offers two doors: study together, or just talk.</sub></td>
