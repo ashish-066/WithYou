@@ -3,6 +3,8 @@
 **A companion you can see, hear and talk to face to face, in your own language.**
 You open WithYou and you're on a video call with someone who looks at you, listens, and answers in Malayalam, Telugu, Tamil, Hindi or English. It talks with you when the day is heavy, sits with you when you study, remembers how you've been, and notices, quietly, when you're not okay.
 
+<p align="center"><b><a href="https://13.205.190.12.sslip.io/demo">▶ Click here to watch the demo video</a></b></p>
+
 Malayalam · Telugu · Tamil · Hindi · English &nbsp;|&nbsp; Live: **https://13.205.190.12.sslip.io** &nbsp;|&nbsp; Demo login: `demo.learner@studybuddy.local` / `demo-password-123`
 
 ---
