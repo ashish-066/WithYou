@@ -1,5 +1,8 @@
-# HTTPS (Let's Encrypt) for the study buddy; DOMAIN is e.g. 1.2.3.4.sslip.io
+# HTTPS (Let's Encrypt) for WithYou; DOMAIN is e.g. 1.2.3.4.sslip.io
 {$DOMAIN} {
 	encode zstd gzip
+	# Stable demo-video link: change DEMO_URL in the server's .env (temporary
+	# redirect, so browsers always follow the current target)
+	redir /demo {$DEMO_URL} 302
 	reverse_proxy frontend:8080
 }

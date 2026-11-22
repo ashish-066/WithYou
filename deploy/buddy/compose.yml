@@ -18,6 +18,7 @@ services:
       - "443:443"
     environment:
       DOMAIN: ${DOMAIN}
+      DEMO_URL: ${DEMO_URL:-https://github.com/ashish-066/WithYou/blob/main/assets/withyou-demo.mp4}
     volumes:
       - ./deploy/buddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
